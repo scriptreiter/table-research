@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import os
+import sys
 import cv2
 from itertools import combinations
 import http.client, urllib.request, urllib.parse, urllib.error, base64
@@ -32,19 +33,23 @@ full_base_dir = 'images/table_training'
 should_run_full_test = False
 
 def main():
+  if len(sys.argv) > 1:
+    img_name = sys.argv[1]
+    should_run_full_test = False
+
   if should_run_full_test:
     print('Running full test')
     run_full_test()
   else:
     print('Running single test')
-    run_single_test()
+    run_single_test(img_name)
 
 def run_full_test():
   images = [img for img in os.listdir(full_base_dir) if img.endswith('.jpg')]
   run_test(images, full_base_dir)
 
-def run_single_test():
-  run_test([full_img], '.')
+def run_single_test(img_name = full_img):
+  run_test([img_name], '.')
   
 def run_test(images, base_dir):
   for image in images:
