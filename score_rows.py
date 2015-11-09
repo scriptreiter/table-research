@@ -7,8 +7,82 @@ def get_structure(boxes, lines):
   # rows = cluster_boxes(boxes, 1)
   # cols = cluster_boxes(boxes, 0)
 
-  rate_combinations(boxes, lines)
-  return ([], [])
+  row_clusters, col_clusters = rate_combinations(boxes, lines)
+
+  rows = translate_clusters(row_clusters)
+  cols = translate_clusters(col_clusters)
+
+  sorted_rows = sorted(rows, key = lambda row: row[1])
+  sorted_cols = sorted(cols, key = lambda col: col[0])
+
+  combined_rows = combine_overlapping_neighbors(sorted_rows, 1, 0.5)
+  combined_cols = combine_overlapping_neighbors(sorted_cols, 0, 0.5)
+
+  return (combined_rows, combined_cols)
+
+def combine_overlapping_neighbors(boxes, offset, threshold):
+  combined = []
+  any_combined = True
+
+  while any_combined:
+    any_combined = False
+
+    # Go through all the boxes, and check against
+    # the previous, or the previously combined
+    for i, box in enumerate(boxes):
+      if i is not 0:
+        x11 = combined[len(combined) - 1][offset]
+        x12 = combined[len(combined) - 1][offset + 2]
+        x21 = box[offset]
+        x22 = box[offset + 2]
+  
+        overlap_pixels = max(0, min(x12, x22) - max(x11, x21))
+        min_range = min(x12 - x11, x22 - x21)
+  
+        overlap = overlap_pixels * 1.0 / min_range
+  
+        if overlap > threshold:
+          combined[len(combined) - 1] = combine_boxes(combined[len(combined) - 1], box)
+          any_combined = True
+          print('combined: ' + str(offset))
+          continue
+
+      # Either not enough overlap, or the first case
+      combined.append(box)
+
+    boxes = combined
+    combined = []
+
+  return boxes
+
+def combine_boxes(box1, box2):
+  comb = (
+    min(box1[0], box2[0]),
+    min(box1[1], box2[1]),
+    max(box1[2], box2[2]),
+    max(box1[3], box2[3]),
+    box1[4] + box2[4]
+  )
+
+  return comb
+
+def translate_clusters(clusters):
+  combined = []
+  for cluster in clusters:
+    labels = []
+    max_x = max_y = float("-inf")
+    min_x = min_y = float("inf")
+
+    for box in cluster:
+      labels.append(box[4])
+      min_x = min(min_x, box[0])
+      max_x = max(max_x, box[0] + box[2])
+      min_y = min(min_y, box[1])
+      max_y = max(max_y, box[1] + box[3])
+
+    combined.append((min_x, min_y, max_x, max_y, labels))
+
+  return combined
 
 def rate_combinations(boxes, lines):
   overall_row_scores = {}
@@ -76,30 +150,47 @@ def rate_combinations(boxes, lines):
     col_score_matrix[comb[0][0]][comb[1][0]] = col_score
     col_score_matrix[comb[1][0]][comb[0][0]] = col_score
 
-  for comb in overall_row_scores:
-    print('comb: ' + str(comb))
-    print('row score: ' + str(overall_row_scores[comb]))
-    print('col score: ' + str(overall_col_scores[comb]))
+  # for comb in overall_row_scores:
+  #   print('comb: ' + str(comb))
+  #   print('row score: ' + str(overall_row_scores[comb]))
+  #   print('col score: ' + str(overall_col_scores[comb]))
 
   row_clusters = cluster_structure(row_score_matrix)
   col_clusters = cluster_structure(col_score_matrix)
 
-  print('Row clusters found:')
-  for cluster in row_clusters:
-    print('*****************')
-    for i in cluster:
-      print(boxes[i])
+  # print('Row clusters found:')
+  # for cluster in row_clusters:
+  #   print('*****************')
+  #   for i in cluster:
+  #     print(boxes[i])
 
-  print('------')
-  print('Col clusters found:')
-  for cluster in col_clusters:
-    print('*****************')
-    for i in cluster:
-      print(boxes[i])
+  # print('------')
+  # print('Col clusters found:')
+  # for cluster in col_clusters:
+  #   print('*****************')
+  #   for i in cluster:
+  #     print(boxes[i])
 
   print('Cluster size estimate: ' + str(len(row_clusters)) + 'x' + str(len(col_clusters)))
 
-  print('done clustering')
+  # print('done clustering')
+
+  # Now translate the clusters of indexes into clusters of boxes
+
+  row_cluster_boxes = []
+
+  for row in row_clusters:
+    row_cluster_boxes.append([])
+    for box_index in row:
+      row_cluster_boxes[len(row_cluster_boxes) - 1].append(boxes[box_index])
+
+  col_cluster_boxes = []
+  for col in col_clusters:
+    col_cluster_boxes.append([])
+    for box_index in col:
+      col_cluster_boxes[len(col_cluster_boxes) - 1].append(boxes[box_index])
+
+  return (row_cluster_boxes, col_cluster_boxes)
 
 def calculate_preceding_line_score(edge1, edge2, lines):
   min_edge = min(edge1, edge2)
@@ -114,7 +205,7 @@ def calculate_preceding_line_score(edge1, edge2, lines):
   # Could also just consider only the minimum, instead of both, but
   # I think both is probably better, for example in the case of two
   # With one far away from the other
-  return 1.0 / (1.0 + edge1 - line + edge2 - line)
+  return 1.0 / (1.0 + edge1 - min_line + edge2 - min_line)
 
 def calculate_succeeding_line_score(edge1, edge2, lines):
   max_edge = max(edge1, edge2)
@@ -129,7 +220,7 @@ def calculate_succeeding_line_score(edge1, edge2, lines):
   # Could also just consider only the maximum, instead of both, but
   # I think both is probably better, for example in the case of two
   # With one far away from the other
-  return 1.0 / (1.0 + line - edge1 + line - edge2)
+  return 1.0 / (1.0 + min_line - edge1 + min_line - edge2)
 
 def cluster_structure(score_matrix):
   clusters = []
