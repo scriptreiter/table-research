@@ -3,6 +3,8 @@ import scipy.cluster.hierarchy as hcluster
 import numpy
 import matplotlib.pyplot as plt
 
+import clusterer
+
 def get_structure(boxes, lines):
   # rows = cluster_boxes(boxes, 1)
   # cols = cluster_boxes(boxes, 0)
@@ -155,8 +157,8 @@ def rate_combinations(boxes, lines):
   #   print('row score: ' + str(overall_row_scores[comb]))
   #   print('col score: ' + str(overall_col_scores[comb]))
 
-  row_clusters = cluster_structure(row_score_matrix)
-  col_clusters = cluster_structure(col_score_matrix)
+  row_clusters = clusterer.cluster_scores(row_score_matrix, 1.3)
+  col_clusters = clusterer.cluster_scores(col_score_matrix, 1.3)
 
   # print('Row clusters found:')
   # for cluster in row_clusters:
@@ -221,43 +223,6 @@ def calculate_succeeding_line_score(edge1, edge2, lines):
   # I think both is probably better, for example in the case of two
   # With one far away from the other
   return 1.0 / (1.0 + min_line - edge1 + min_line - edge2)
-
-def cluster_structure(score_matrix):
-  clusters = []
-  score_threshold = 1.3
-  for i in range(len(score_matrix)):
-    curr_cluster = set([i])
-    for j in range(len(score_matrix)):
-      curr_score = score_matrix[i][j]
-      if curr_score > score_threshold:
-        curr_cluster.add(j)
-
-      clusters.append(curr_cluster)
-
-  # Now we need to merge any clusters with shared elements
-  # Based roughly on the algorithm from Niklas at:
-  # http://stackoverflow.com/questions/9110837/python-simple-list-merging-based-on-intersections
-  have_merged = True
-  while have_merged:
-    have_merged = False
-    new_clusters = []
-    while len(clusters) > 0:
-      first = clusters[0]
-      remaining = clusters[1:]
-      clusters = []
-
-      for cluster in remaining:
-        if cluster.isdisjoint(first):
-          clusters.append(cluster)
-        else:
-          have_merged = True
-          first |= cluster
-
-      new_clusters.append(first)
-
-    clusters = new_clusters
-
-  return clusters
 
 # Returns percent overlap (length of overlap over min side interval length)
 def calculate_vertical_overlap(box1, box2):

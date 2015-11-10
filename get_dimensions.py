@@ -21,6 +21,8 @@ full_img = 'api_test_image_full.jpg'
 output_file = 'detected_boxes.jpg'
 verbose = False
 full_base_dir = 'images/table_training'
+zoom_level = 3
+sleep_delay = 5
 
 def main():
   if len(sys.argv) > 1:
@@ -44,14 +46,16 @@ def run_single_test(img_name = full_img):
   
 def run_test(images, base_dir):
   for image in images:
+    if not image.startswith('005'):
+      continue
     # time.sleep(5)
     print('Processing: ' + image)
 
-    data = oxford_api.get_json_data(image, base_dir);
-
-    boxes = boxer.get_boxes(data)
+    data = oxford_api.get_json_data(image, base_dir, zoom_level);
 
     lines = liner.get_lines(image, base_dir)
+
+    boxes = boxer.get_boxes(data, zoom_level, lines)
 
     scores = liner.rate_lines(lines, boxes)
 
@@ -71,6 +75,9 @@ def run_test(images, base_dir):
     print('Estimating (' + str(len(new_lines[0]) - 1) + ' x ' + str(len(new_lines[1]) - 1) + ')')
 
     print()
+
+    if sleep_delay > 0:
+      time.sleep(sleep_delay)
 
 def print_structure(clusters, label):
   print('Printing structure (' + label + ')')

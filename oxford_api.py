@@ -18,8 +18,9 @@ params = urllib.parse.urlencode({
     'detectOrientation ': 'true',
 })
 
-def get_json_data(image, base_path):
-  json_cache_file = json_cache_path + '/2x/' + image + '.json'
+def get_json_data(image, base_path, zoom_level):
+  zoom_prefix = str(zoom_level) + 'x/' if zoom_level > 1 else ''
+  json_cache_file = json_cache_path + '/' + zoom_prefix + image + '.json'
 
   if os.path.isfile(json_cache_file):
     data = json.loads(open(json_cache_file, 'r').read())
@@ -27,7 +28,7 @@ def get_json_data(image, base_path):
     if 'statusCode' not in data or data['statusCode'] != 429:
       return data
 
-  img_data = open(base_path + '/2x/' + image, 'rb').read()
+  img_data = open(base_path + '/' + zoom_prefix + image, 'rb').read()
 
   try:
     conn = http.client.HTTPSConnection('api.projectoxford.ai')
