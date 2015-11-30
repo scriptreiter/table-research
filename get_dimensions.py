@@ -12,6 +12,8 @@ import sub_key
 import oxford_api
 import boxer
 import liner
+import spreadsheeter
+import scorer
 
 # Will need to do some interesting work to see if we need an edge line
 
@@ -20,9 +22,12 @@ json_cache_path = 'json_cache'
 full_img = 'api_test_image_full.jpg'
 output_file = 'detected_boxes.jpg'
 verbose = False
-full_base_dir = 'images/table_training'
+# full_base_dir = 'images/table_training'
+full_base_dir = 'regents_table'
+img_pref = 'regents/'
+xlsx_path = 'xlsx_adjusted'
 zoom_level = 3
-sleep_delay = 5
+sleep_delay = 0
 
 def main():
   if len(sys.argv) > 1:
@@ -46,16 +51,19 @@ def run_single_test(img_name = full_img):
   
 def run_test(images, base_dir):
   for image in images:
-    if not image.startswith('005'):
-      continue
-    # time.sleep(5)
+    # Set the current image for the evaluation scorer
+    scorer.set_current_image(image)
+
+    # if not image.startswith('005'):
+      # continue
+
     print('Processing: ' + image)
 
-    data = oxford_api.get_json_data(image, base_dir, zoom_level);
+    data = oxford_api.get_json_data(image, base_dir, zoom_level, img_pref);
 
     lines = liner.get_lines(image, base_dir)
 
-    boxes = boxer.get_boxes(data, zoom_level, lines)
+    boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines)
 
     scores = liner.rate_lines(lines, boxes)
 
@@ -65,19 +73,29 @@ def run_test(images, base_dir):
 
     rows, cols = score_rows.get_structure(boxes, new_lines)
 
-    print_structure(rows, 'Rows')
-    print_structure(cols, 'Cols')
+    if verbose:
+      print_structure(rows, 'Rows')
+      print_structure(cols, 'Cols')
 
-    draw_lines(base_dir + '/' + image, new_lines, 'images/table_labeling/' + image)
+    draw_lines(base_dir + '/' + image, new_lines, img_pref + 'table_labeling/' + image)
 
-    draw_structure(rows, cols, base_dir + '/' + image, new_lines, 'images/table_structure/' + image)
+    draw_structure(translate_box_paradigm(raw_boxes), base_dir + '/' + image, img_pref + 'table_structure/' + image + '_raw_boxes.jpg')
+    draw_structure(translate_box_paradigm(boxes), base_dir + '/' + image, img_pref + 'table_structure/' + image + '_merged_boxes.jpg')
+    draw_structure(rows, base_dir + '/' + image, img_pref + 'table_structure/' + image + '_rows.jpg')
+    draw_structure(cols, base_dir + '/' + image, img_pref + 'table_structure/' + image + '_cols.jpg')
 
-    print('Estimating (' + str(len(new_lines[0]) - 1) + ' x ' + str(len(new_lines[1]) - 1) + ')')
+    zoom_prefix = str(zoom_level) + 'x/' if zoom_level > 1 else ''
+    spreadsheeter.output(rows, cols, boxes, img_pref + xlsx_path + '/' + zoom_prefix + image + '.xlsx')
 
-    print()
+    if verbose:
+      print('Estimating (' + str(len(new_lines[0]) - 1) + ' x ' + str(len(new_lines[1]) - 1) + ')')
+
+      print()
 
     if sleep_delay > 0:
       time.sleep(sleep_delay)
+
+  scorer.evaluate()
 
 def print_structure(clusters, label):
   print('Printing structure (' + label + ')')
@@ -86,16 +104,21 @@ def print_structure(clusters, label):
     print('box: (' + str(box[0]) + ', ' + str(box[1]) + ', ' + str(box[2]) + ', ' + str(box[3]) + ')')
     print('  text: ' + ', '.join(box[4]))
 
-def draw_structure(rows, cols, img_path, lines, output_file):
+def translate_box_paradigm(boxes):
+  new_boxes = []
+
+  for box in boxes:
+    new_boxes.append((box[0], box[1], box[0] + box[2], box[1] + box[3], box[4]))
+
+  return new_boxes
+
+def draw_structure(boxes, img_path, output_img):
   img = cv2.imread(img_path)
 
-  for box in rows:
+  for box in boxes:
     cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), (0, 0, 255))
 
-  for box in cols:
-    cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), (255, 0, 0))
-
-  cv2.imwrite(output_file, img)
+  cv2.imwrite(output_img, img)
 
 def draw_lines(img_path, lines, output_file):
   img = cv2.imread(img_path)

@@ -4,6 +4,7 @@ import numpy
 import matplotlib.pyplot as plt
 
 import clusterer
+import scorer
 
 def get_structure(boxes, lines):
   # rows = cluster_boxes(boxes, 1)
@@ -17,8 +18,14 @@ def get_structure(boxes, lines):
   sorted_rows = sorted(rows, key = lambda row: row[1])
   sorted_cols = sorted(cols, key = lambda col: col[0])
 
+  scorer.add_score('initial_rows', len(sorted_rows))
+  scorer.add_score('initial_cols', len(sorted_cols))
+
   combined_rows = combine_overlapping_neighbors(sorted_rows, 1, 0.5)
   combined_cols = combine_overlapping_neighbors(sorted_cols, 0, 0.5)
+
+  scorer.add_score('combined_rows', len(combined_rows))
+  scorer.add_score('combined_cols', len(combined_cols))
 
   return (combined_rows, combined_cols)
 
@@ -46,7 +53,7 @@ def combine_overlapping_neighbors(boxes, offset, threshold):
         if overlap > threshold:
           combined[len(combined) - 1] = combine_boxes(combined[len(combined) - 1], box)
           any_combined = True
-          print('combined: ' + str(offset))
+          # print('combined: ' + str(offset))
           continue
 
       # Either not enough overlap, or the first case
@@ -58,31 +65,32 @@ def combine_overlapping_neighbors(boxes, offset, threshold):
   return boxes
 
 def combine_boxes(box1, box2):
-  comb = (
+  return (
     min(box1[0], box2[0]),
     min(box1[1], box2[1]),
     max(box1[2], box2[2]),
     max(box1[3], box2[3]),
-    box1[4] + box2[4]
+    box1[4] + box2[4],
+    box1[5] + box2[5]
   )
-
-  return comb
 
 def translate_clusters(clusters):
   combined = []
   for cluster in clusters:
     labels = []
+    boxes = []
     max_x = max_y = float("-inf")
     min_x = min_y = float("inf")
 
     for box in cluster:
-      labels.append(box[4])
+      labels += box[4]
+      boxes.append(box)
       min_x = min(min_x, box[0])
       max_x = max(max_x, box[0] + box[2])
       min_y = min(min_y, box[1])
       max_y = max(max_y, box[1] + box[3])
 
-    combined.append((min_x, min_y, max_x, max_y, labels))
+    combined.append((min_x, min_y, max_x, max_y, labels, boxes))
 
   return combined
 
@@ -173,7 +181,8 @@ def rate_combinations(boxes, lines):
   #   for i in cluster:
   #     print(boxes[i])
 
-  print('Cluster size estimate: ' + str(len(row_clusters)) + 'x' + str(len(col_clusters)))
+  scorer.add_score('cluster_rows', len(row_clusters))
+  scorer.add_score('cluster_cols', len(col_clusters))
 
   # print('done clustering')
 

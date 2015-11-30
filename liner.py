@@ -2,6 +2,8 @@ import numpy as np
 import cv2
 from itertools import combinations
 
+import scorer
+
 verbose = False
 
 def get_lines(img_name, base_path):
@@ -36,6 +38,15 @@ def get_lines(img_name, base_path):
     elif verbose:
       print('Nonstandard line: ' + str(theta))
 
+  scorer.add_score('horiz_lines', len(horiz_lines))
+  scorer.add_score('vert_lines', len(vert_lines))
+
+  scorer.add_score('line_outside_rows', len(horiz_lines) - 1)
+  scorer.add_score('line_outside_cols', len(vert_lines) - 1)
+
+  scorer.add_score('line_inside_rows', len(horiz_lines) + 1)
+  scorer.add_score('line_inside_cols', len(vert_lines) + 1)
+
   return (horiz_lines, vert_lines)
   
 def get_sorted_avg_lines(lines):
@@ -68,6 +79,8 @@ def remove_lines(lines, filtered_lines, scores):
   new_horiz_lines = cut_lines(lines[0], filtered_lines[0], scores[0])
   new_vert_lines = cut_lines(lines[1], filtered_lines[1], scores[1])
 
+  scorer.add_score('new_horiz_lines', len(new_horiz_lines))
+  scorer.add_score('new_vert_lines', len(new_vert_lines))
   return (new_horiz_lines, new_vert_lines)
 
 def cut_lines(lines, filtered, scores):

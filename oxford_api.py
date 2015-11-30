@@ -18,9 +18,9 @@ params = urllib.parse.urlencode({
     'detectOrientation ': 'true',
 })
 
-def get_json_data(image, base_path, zoom_level):
+def get_json_data(image, base_path, zoom_level, pref):
   zoom_prefix = str(zoom_level) + 'x/' if zoom_level > 1 else ''
-  json_cache_file = json_cache_path + '/' + zoom_prefix + image + '.json'
+  json_cache_file = pref + json_cache_path + '/' + zoom_prefix + image + '.json'
 
   if os.path.isfile(json_cache_file):
     data = json.loads(open(json_cache_file, 'r').read())

@@ -6,7 +6,7 @@ def get_boxes(data, zoom_level, lines):
 
   combined = combine_boxes(raw_boxes, lines)
 
-  return combined
+  return combined, raw_boxes
 
 def get_boxes_from_json(data, zoom_level = 1):
   boxes = []
@@ -30,7 +30,7 @@ def get_boxes_from_json(data, zoom_level = 1):
 def combine_boxes(boxes, lines):
   box_scores = score_boxes(boxes, lines)
 
-  print('scoring clusters for boxes')
+  # print('scoring clusters for boxes')
   score_clusters = clusterer.cluster_scores(box_scores, 4.0)
 
   # Now need to translate score_cluster indices into boxes,
@@ -40,9 +40,9 @@ def combine_boxes(boxes, lines):
 
   combined = combine_clustered_boxes(clustered)
 
-  import pdb; pdb.set_trace()
+  return combined
 
-  return boxes
+  # return boxes # Soon return combined
 
 def combine_clustered_boxes(clusters):
   new_boxes = []
