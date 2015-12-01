@@ -1,14 +1,15 @@
 import xlsxwriter
 import os
+import json
 
-def output(rows, cols, boxes, path):
+def output(rows, cols, boxes, xlsx_path, json_path):
   try:
-    os.remove(path)
+    os.remove(xlsx_path)
   except OSError:
     pass
 
   try:
-    book = xlsxwriter.Workbook(path)
+    book = xlsxwriter.Workbook(xlsx_path)
     sheet = book.add_worksheet()
   
     indices = {}
@@ -28,12 +29,14 @@ def output(rows, cols, boxes, path):
 
     cells = [[[] for x in range(len(cols))] for y in range(len(rows))]
 
-    if path.endswith('2009-01-28_12_71-74.jpg.xlsx'):
-      import pdb;pdb.set_trace()
+    if xlsx_path.endswith('2009-01-28_12_71-74.jpg.xlsx'):
+      # import pdb;pdb.set_trace()
       print('what')
 
     for i,box in enumerate(boxes):
       cells[indices[i]['row']][indices[i]['col']].append(box)
+
+    out_arr = [['' for x in range(len(cols))] for y in range(len(rows))]
 
     for row_idx, row in enumerate(cells):
       for col_idx, cell in enumerate(row):
@@ -45,7 +48,11 @@ def output(rows, cols, boxes, path):
 
         sheet.write(row_idx, col_idx, ' '.join(flat_labels))
 
-    #
+        # Store for json output
+        out_arr[row_idx][col_idx] = ' '.join(flat_labels)
+
+    with open(json_path, 'w') as f:
+      json.dump({'cells': out_arr}, f)
   
     # sheet.write(row, col, item)
 

@@ -26,6 +26,7 @@ verbose = False
 full_base_dir = 'regents_table'
 img_pref = 'regents/'
 xlsx_path = 'xlsx_adjusted'
+json_out_path = 'json_out'
 zoom_level = 3
 sleep_delay = 0
 
@@ -77,6 +78,7 @@ def run_test(images, base_dir):
       print_structure(rows, 'Rows')
       print_structure(cols, 'Cols')
 
+    draw_lines(base_dir + '/' + image, lines, img_pref + 'table_labeling/' + image + '_orig.jpg')
     draw_lines(base_dir + '/' + image, new_lines, img_pref + 'table_labeling/' + image)
 
     draw_structure(translate_box_paradigm(raw_boxes), base_dir + '/' + image, img_pref + 'table_structure/' + image + '_raw_boxes.jpg')
@@ -85,7 +87,7 @@ def run_test(images, base_dir):
     draw_structure(cols, base_dir + '/' + image, img_pref + 'table_structure/' + image + '_cols.jpg')
 
     zoom_prefix = str(zoom_level) + 'x/' if zoom_level > 1 else ''
-    spreadsheeter.output(rows, cols, boxes, img_pref + xlsx_path + '/' + zoom_prefix + image + '.xlsx')
+    spreadsheeter.output(rows, cols, boxes, img_pref + xlsx_path + '/' + zoom_prefix + image + '.xlsx', img_pref + json_out_path + '/' + zoom_prefix + image + '.json')
 
     if verbose:
       print('Estimating (' + str(len(new_lines[0]) - 1) + ' x ' + str(len(new_lines[1]) - 1) + ')')
@@ -126,10 +128,10 @@ def draw_lines(img_path, lines, output_file):
   vert_lines = lines[1]
 
   for line in horiz_lines:
-    cv2.line(img, (line['start'], line['border']), (line['end'], line['border']), (0, 255, 0), 1);
+    cv2.line(img, (line['start'], line['border']), (line['end'], line['border']), (0, 0, 255), 1);
 
   for line in vert_lines:
-    cv2.line(img, (line['border'], line['start']), (line['border'], line['end']), (0, 255, 0), 1);
+    cv2.line(img, (line['border'], line['start']), (line['border'], line['end']), (0, 0, 255), 1);
 
   cv2.imwrite(output_file, img)
 
