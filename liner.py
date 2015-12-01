@@ -10,7 +10,7 @@ def get_lines(img_name, base_path):
   img = cv2.imread(base_path + '/' + img_name)
   gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
   edges = cv2.Canny(gray, 50, 150, apertureSize = 3)
-  lines = cv2.HoughLines(edges, 1, np.pi / 180, 160)
+  lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 160, minLineLength=20, maxLineGap=1)
 
   if lines is None:
     lines = []
@@ -22,18 +22,23 @@ def get_lines(img_name, base_path):
   vert_lines = []
   
   for info in lines:
-    rho = info[0][0]
-    theta = info[0][1]
-  
-    if abs(theta - (np.pi / 2)) < 0.1 or abs(theta - (np.pi * 3 / 2)) < 0.1:
+    x1, y1, x2, y2 = info[0]
+
+    line_info = {}
+
+    if abs(y1 - y2) < 0.1:
       # This is a horizontal line
-      y = int(np.sin(theta) * rho)
-      horiz_lines.append(y)
+      line_info['border'] = int((y1 + y2) / 2)
+      line_info['start'] = x1
+      line_info['end'] = x2
+      horiz_lines.append(line_info)
       horiz_count += 1
-    elif abs(theta - 0) < 0.1 or abs(theta - np.pi) < 0.1:
+    elif abs(x1 - x2) < 0.1:
       # This is a vertical line
-      x = int(np.cos(theta) * rho)
-      vert_lines.append(x)
+      line_info['border'] = int((x1 + x2) / 2)
+      line_info['start'] = y1
+      line_info['end'] = y2
+      vert_lines.append(line_info)
       vert_count += 1
     elif verbose:
       print('Nonstandard line: ' + str(theta))
@@ -58,11 +63,11 @@ def get_sorted_avg_lines(lines):
   horiz_bins = []
   vert_bins = []
   
-  for y in horiz_lines:
-    bin_value(y, horiz_bins, tolerance)
+  for line in horiz_lines:
+    bin_value(line, horiz_bins, tolerance)
   
-  for x in vert_lines:
-    bin_value(x, vert_bins, tolerance)
+  for line in vert_lines:
+    bin_value(line, vert_bins, tolerance)
   
   # Now average out the bins
   horiz_markers = average_bins(horiz_bins)
@@ -114,8 +119,10 @@ def filter_lines(lines, boxes, scores):
 def check_lines(lines, boxes, scores, offset):
   removed_lines = set()
   for comb in combinations(enumerate(lines), 2):
-    min_val = min(comb[0][1], comb[1][1])
-    max_val = max(comb[0][1], comb[1][1])
+    line_1 = comb[0][1]
+    line_2 = comb[1][1]
+    min_val = min(line_1['border'], line_2['border'])
+    max_val = max(line_1['border'], line_2['border'])
 
     box_inbetween = False
     for box in boxes:
@@ -124,7 +131,10 @@ def check_lines(lines, boxes, scores, offset):
       if (box_edge_1 < max_val and box_edge_1 > min_val) or (box_edge_2 < max_val and box_edge_2 > min_val):
         box_inbetween = True
 
-    if not box_inbetween:
+    # Quick hack for now to avoid cutting two line segments at the same
+    # offset. If there is no box in between, then we can just check if they are on the
+    # same offset. We may do something more elegant later
+    if not box_inbetween and line_1['border'] != line_2['border']:
       # We need to choose one line over the other
       if scores[comb[0][0]] > scores[comb[1][0]]:
         removed_lines.add(comb[1][0])
@@ -136,8 +146,8 @@ def check_lines(lines, boxes, scores, offset):
 def rate_lines(lines, boxes):
   horiz_lines = lines[0]
   vert_lines = lines[1]
-  horiz_lines.sort()
-  vert_lines.sort()
+  horiz_lines.sort(key = lambda info: info['border'])
+  vert_lines.sort(key = lambda info: info['border'])
 
   horiz_scores = calc_line_box_scores(horiz_lines, boxes, 1)
   vert_scores = calc_line_box_scores(vert_lines, boxes, 0)
@@ -164,27 +174,36 @@ def calc_line_box_scores(lines, boxes, offset):
       first_edge = box[offset]
       second_edge = box[offset] + box[offset + 2]
 
-      # Calculate the minimum distance to either edge of this box
-      min_to_edge = min(abs(line - first_edge), abs(line - second_edge))
+      alt_offset = (offset + 1) % 2
+      first_alt_edge = box[alt_offset]
+      second_alt_edge = box[alt_offset + 2]
 
-      # If it intersections the box, track that, and penalize based
-      # on how far into the box it is
-      if line >= first_edge and line <= second_edge:
-        num_intersections += 1
-        intersection_penalty += min_to_edge
 
-      # Could track some sense of uniformity in the closest edges
-      # Although the case of this provides a problem:
-      #
-      # Line 1
-      # Line 2        Line 1      Line 1
-      # Line 3
-      #
-      # Because it would preference grid lines through cell 1
+      # We only want to consider the box if the line overlaps it somewhat
+      overlap = max(0, min(line['end'], second_alt_edge) - max(line['start'], first_alt_edge))
 
-      # Check if this is the smallest margin, yet
-      if min_to_edge < min_margin:
-        min_margin = min_to_edge
+      if overlap > 0:
+        # Calculate the minimum distance to either edge of this box
+        min_to_edge = min(abs(line['border'] - first_edge), abs(line['border'] - second_edge))
+  
+        # If it intersects the box, track that, and penalize based
+        # on how far into the box it is
+        if line['border'] >= first_edge and line['border'] <= second_edge:
+          num_intersections += 1
+          intersection_penalty += min_to_edge
+  
+        # Could track some sense of uniformity in the closest edges
+        # Although the case of this provides a problem:
+        #
+        # Line 1
+        # Line 2        Line 1      Line 1
+        # Line 3
+        #
+        # Because it would preference grid lines through cell 1
+  
+        # Check if this is the smallest margin, yet
+        if min_to_edge < min_margin:
+          min_margin = min_to_edge
 
     score = min_margin - (num_intersections * intersection_penalty)
 
@@ -192,15 +211,15 @@ def calc_line_box_scores(lines, boxes, offset):
 
   return scores
 
-def bin_value(val, bins, tolerance):
+def bin_value(line, bins, tolerance):
   for bin in bins:
-    for bin_val in bin:
-      if abs(val - bin_val) < tolerance:
-        bin.append(val)
+    for bin_line in bin:
+      if abs(line['border'] - bin_line['border']) < tolerance:
+        bin.append(line)
         return
 
   # Not within tolerance of any bin
-  bins.append([val])
+  bins.append([line])
 
 def display_bins(bins):
   if verbose:

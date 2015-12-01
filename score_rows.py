@@ -203,35 +203,41 @@ def rate_combinations(boxes, lines):
 
   return (row_cluster_boxes, col_cluster_boxes)
 
+# We may eventually want to take into account the proximity of a line, as this
+# will currently treat a line as infinte, ignoring our endpoints. I think
+# this is okay behavior, as the presence of a line close above (left) still suggests
+# row (col) structure even if offset somewhat
 def calculate_preceding_line_score(edge1, edge2, lines):
   min_edge = min(edge1, edge2)
   min_dist = float('inf')
-  min_line = 0
+  min_line = {'border': 0}
 
   for line in lines:
-    if line <= min_edge and min_edge - line < min_dist:
-      min_dist = min_edge - line
+    if line['border'] <= min_edge and min_edge - line['border'] < min_dist:
+      min_dist = min_edge - line['border']
       min_line = line
 
   # Could also just consider only the minimum, instead of both, but
   # I think both is probably better, for example in the case of two
   # With one far away from the other
-  return 1.0 / (1.0 + edge1 - min_line + edge2 - min_line)
+  return 1.0 / (1.0 + edge1 - min_line['border'] + edge2 - min_line['border'])
 
+# See the note above (for calculate_preceding_line_score) regarding
+# doing this for segmented lines, possibly
 def calculate_succeeding_line_score(edge1, edge2, lines):
   max_edge = max(edge1, edge2)
   min_dist = float('inf')
-  min_line = 0
+  min_line = {'border': 0}
 
   for line in lines:
-    if line >= max_edge and max_edge - line < min_dist:
-      min_dist = max_edge - line
+    if line['border'] >= max_edge and max_edge - line['border'] < min_dist:
+      min_dist = max_edge - line['border']
       min_line = line
 
   # Could also just consider only the maximum, instead of both, but
   # I think both is probably better, for example in the case of two
   # With one far away from the other
-  return 1.0 / (1.0 + min_line - edge1 + min_line - edge2)
+  return 1.0 / (1.0 + min_line['border'] - edge1 + min_line['border'] - edge2)
 
 # Returns percent overlap (length of overlap over min side interval length)
 def calculate_vertical_overlap(box1, box2):

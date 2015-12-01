@@ -142,7 +142,21 @@ def score_boxes(boxes, lines):
 def line_between(box1, box2, lines, offset):
   for line in lines[(offset + 1) % 2]:
     # Should this be a comparison only b/w the innermost values?
-    if box1[offset] + box1[offset + 2] <= line <= box2[offset] or box2[offset] + box2[offset + 2] <= line <= box1[offset]:
+
+    # Check if box1, line, box2
+    is_bw_1 = box1[offset] + box1[offset + 2] <= line['border'] <= box2[offset]
+
+    # Check if box2, line, box1
+    is_bw_2 = box2[offset] + box2[offset + 2] <= line['border'] <= box1[offset]
+
+    alt_offset = (offset + 1) % 2
+
+    # Check if the line overlaps with box1
+    intersects_1 = max(0, min(line['end'], box1[alt_offset] + box1[alt_offset + 2]) - max(line['start'], box1[alt_offset]))
+
+    # Check if the line overlaps with box2
+    intersects_2 = max(0, min(line['end'], box2[alt_offset] + box2[alt_offset + 2]) - max(line['start'], box2[alt_offset]))
+    if (is_bw_1 or is_bw_2) and (intersects_1 or intersects_2):
       return True
 
   return False

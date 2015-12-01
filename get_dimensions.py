@@ -125,13 +125,11 @@ def draw_lines(img_path, lines, output_file):
   horiz_lines = lines[0]
   vert_lines = lines[1]
 
-  height, width, channels = img.shape
-
   for line in horiz_lines:
-    cv2.line(img, (0, line), (width, line), (0, 255, 0), 1);
+    cv2.line(img, (line['start'], line['border']), (line['end'], line['border']), (0, 255, 0), 1);
 
   for line in vert_lines:
-    cv2.line(img, (line, 0), (line, height), (0, 255, 0), 1);
+    cv2.line(img, (line['border'], line['start']), (line['border'], line['end']), (0, 255, 0), 1);
 
   cv2.imwrite(output_file, img)
 
