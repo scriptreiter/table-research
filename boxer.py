@@ -52,6 +52,10 @@ def combine_clustered_boxes(clusters):
     max_x = max_y = float('-inf')
     labels = []
 
+    # Sort the boxes in the cluster by x and then y
+    # to preserve label ordering
+    cluster.sort(key = lambda x: (x[0], x[1]))
+
     for box in cluster:
       min_x = min(min_x, box[0])
       min_y = min(min_y, box[1])

@@ -33,6 +33,8 @@ def combine_overlapping_neighbors(boxes, offset, threshold):
   combined = []
   any_combined = True
 
+  # import pdb;pdb.set_trace()
+
   while any_combined:
     any_combined = False
 
@@ -51,6 +53,7 @@ def combine_overlapping_neighbors(boxes, offset, threshold):
         overlap = overlap_pixels * 1.0 / min_range
   
         if overlap > threshold:
+          # import pdb;pdb.set_trace()
           combined[len(combined) - 1] = combine_boxes(combined[len(combined) - 1], box)
           any_combined = True
           # print('combined: ' + str(offset))

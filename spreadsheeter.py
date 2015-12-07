@@ -40,7 +40,7 @@ def output(rows, cols, boxes, xlsx_path, json_path):
 
     for row_idx, row in enumerate(cells):
       for col_idx, cell in enumerate(row):
-        sorted_labels = [box[4] for box in sorted(cell, key = lambda x: x[0])]
+        sorted_labels = [box[4] for box in sorted(cell, key = lambda x: (x[0], x[1]))]
         flat_labels = []
 
         for labels in sorted_labels:

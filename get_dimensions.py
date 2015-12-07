@@ -14,6 +14,7 @@ import boxer
 import liner
 import spreadsheeter
 import scorer
+import hallucinator
 
 # Will need to do some interesting work to see if we need an edge line
 
@@ -55,7 +56,7 @@ def run_test(images, base_dir):
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    # if not image.startswith('005'):
+    # if not image.startswith('2007_4_15'):
       # continue
 
     print('Processing: ' + image)
@@ -65,6 +66,8 @@ def run_test(images, base_dir):
     lines = liner.get_lines(image, base_dir)
 
     boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines)
+
+    hallucinated_boxes = hallucinator.get_boxes(image, base_dir, img_pref + 'box_hallucinations/' + image)
 
     scores = liner.rate_lines(lines, boxes)
 
