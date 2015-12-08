@@ -56,8 +56,8 @@ def run_test(images, base_dir):
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    # if not image.startswith('2007_4_15'):
-      # continue
+    if not image.startswith('2007-01-24_12_64-65'):
+      continue
 
     print('Processing: ' + image)
 
@@ -67,7 +67,12 @@ def run_test(images, base_dir):
 
     boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines)
 
-    hallucinated_boxes = hallucinator.get_boxes(image, base_dir, img_pref + 'box_hallucinations/' + image)
+    h_boxes, hierarchy = hallucinator.get_contours(image, base_dir, img_pref + 'box_hallucinations/' + image)
+
+    root_boxes = hallucinator.get_root_contours(h_boxes, hierarchy)
+    child_boxes = hallucinator.contours_to_boxes(hallucinator.get_child_contours(h_boxes, hierarchy))
+
+    boxes = child_boxes
 
     scores = liner.rate_lines(lines, boxes)
 
