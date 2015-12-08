@@ -21,19 +21,18 @@ def get_structure(boxes, lines):
   scorer.add_score('initial_rows', len(sorted_rows))
   scorer.add_score('initial_cols', len(sorted_cols))
 
-  combined_rows = combine_overlapping_neighbors(sorted_rows, 1, 0.5)
-  combined_cols = combine_overlapping_neighbors(sorted_cols, 0, 0.5)
+  # combined_rows = combine_overlapping_neighbors(sorted_rows, 1, 0.5)
+  # combined_cols = combine_overlapping_neighbors(sorted_cols, 0, 0.5)
 
-  scorer.add_score('combined_rows', len(combined_rows))
-  scorer.add_score('combined_cols', len(combined_cols))
+  # scorer.add_score('combined_rows', len(combined_rows))
+  # scorer.add_score('combined_cols', len(combined_cols))
 
-  return (combined_rows, combined_cols)
+  # return (combined_rows, combined_cols)
+  return (sorted_rows, sorted_cols)
 
 def combine_overlapping_neighbors(boxes, offset, threshold):
   combined = []
   any_combined = True
-
-  # import pdb;pdb.set_trace()
 
   while any_combined:
     any_combined = False
@@ -53,7 +52,6 @@ def combine_overlapping_neighbors(boxes, offset, threshold):
         overlap = overlap_pixels * 1.0 / min_range
   
         if overlap > threshold:
-          # import pdb;pdb.set_trace()
           combined[len(combined) - 1] = combine_boxes(combined[len(combined) - 1], box)
           any_combined = True
           # print('combined: ' + str(offset))
@@ -168,8 +166,8 @@ def rate_combinations(boxes, lines):
   #   print('row score: ' + str(overall_row_scores[comb]))
   #   print('col score: ' + str(overall_col_scores[comb]))
 
-  row_clusters = clusterer.cluster_scores(row_score_matrix, 1.3)
-  col_clusters = clusterer.cluster_scores(col_score_matrix, 1.3)
+  row_clusters = clusterer.new_cluster_scores(row_score_matrix, 1.3)
+  col_clusters = clusterer.new_cluster_scores(col_score_matrix, 1.3)
 
   # print('Row clusters found:')
   # for cluster in row_clusters:

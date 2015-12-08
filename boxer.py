@@ -1,4 +1,5 @@
 import clusterer
+import operator
 from itertools import combinations
 
 def get_boxes(data, zoom_level, lines):
@@ -173,3 +174,21 @@ def combine_scores(scores):
     total += scores[score_type]
 
   return total
+
+def add_labels(boxes, label_boxes, threshold):
+  labeled = []
+  for box in boxes:
+    labels = []
+    for label_box in label_boxes:
+      horiz_over = max(0, min(box[0] + box[2], label_box[0] + label_box[2]) - max(box[0], label_box[0]))
+      vert_over = max(0, min(box[1] + box[3], label_box[1] + label_box[3]) - max(box[1], label_box[1]))
+      overlap_area = horiz_over * vert_over
+      min_area = min(box[2] * box[3], label_box[2] * label_box[3])
+      if overlap_area * 1.0 / min_area > threshold:
+        labels.append(label_box)
+
+    label = [' '.join(x[4]) for x in sorted(labels, key = lambda x: (x[0], x[1]))]
+
+    labeled.append((box[0], box[1], box[2], box[3], label))
+
+  return labeled

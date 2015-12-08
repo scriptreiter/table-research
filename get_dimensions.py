@@ -56,7 +56,7 @@ def run_test(images, base_dir):
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    if not image.startswith('2007-01-24_12_64-65'):
+    if not image.startswith('2009_4_32-34.'):
       continue
 
     print('Processing: ' + image)
@@ -65,14 +65,14 @@ def run_test(images, base_dir):
 
     lines = liner.get_lines(image, base_dir)
 
-    boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines)
+    ocr_boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines)
 
     h_boxes, hierarchy = hallucinator.get_contours(image, base_dir, img_pref + 'box_hallucinations/' + image)
 
     root_boxes = hallucinator.get_root_contours(h_boxes, hierarchy)
     child_boxes = hallucinator.contours_to_boxes(hallucinator.get_child_contours(h_boxes, hierarchy))
 
-    boxes = child_boxes
+    boxes = boxer.add_labels(child_boxes, ocr_boxes, 0.9)
 
     scores = liner.rate_lines(lines, boxes)
 
@@ -81,6 +81,8 @@ def run_test(images, base_dir):
     new_lines = liner.remove_lines(lines, filtered_lines, scores)
 
     rows, cols = score_rows.get_structure(boxes, new_lines)
+
+    import pdb;pdb.set_trace()
 
     if verbose:
       print_structure(rows, 'Rows')
@@ -105,7 +107,7 @@ def run_test(images, base_dir):
     if sleep_delay > 0:
       time.sleep(sleep_delay)
 
-  scorer.evaluate()
+  # scorer.evaluate()
 
 def print_structure(clusters, label):
   print('Printing structure (' + label + ')')

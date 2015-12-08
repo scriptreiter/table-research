@@ -36,7 +36,7 @@ def check_annotations():
 
   annotations = read_annotations()
 
-  score_types = ['initial', 'combined', 'cluster', 'line_outside', 'line_inside']
+  score_types = ['initial', 'cluster', 'line_outside', 'line_inside']
 
   total_evaluated = 0
   total_correct = {}
@@ -60,10 +60,6 @@ def check_annotations():
       for score_type in score_types:
         guess_rows = predicted[image][score_type + '_rows']
         guess_cols = predicted[image][score_type + '_cols']
-
-        if score_type == 'combined' and guess_rows != actual_rows:
-          # import pdb;pdb.set_trace()
-          print('Didn\'t get: ' + image)
 
         if guess_rows == actual_rows:
           total_correct[score_type + '_rows'] += 1

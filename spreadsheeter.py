@@ -20,36 +20,69 @@ def output(rows, cols, boxes, xlsx_path, json_path):
         idx = boxes.index(box)
         indices[idx] = {}
   
-        indices[idx]['row'] = i
+        # This could be made more efficient with a default dict
+        if 'rows' not in indices[idx]:
+          indices[idx]['rows'] = []
+
+        indices[idx]['rows'].append(i)
   
     for i, col in enumerate(cols):
       for box in col[5]:
         idx = boxes.index(box)
-        indices[idx]['col'] = i
+
+        # See note about efficiency above
+        if 'cols' not in indices[idx]:
+          indices[idx]['cols'] = []
+
+        indices[idx]['cols'].append(i)
 
     cells = [[[] for x in range(len(cols))] for y in range(len(rows))]
 
-    if xlsx_path.endswith('2009-01-28_12_71-74.jpg.xlsx'):
-      # import pdb;pdb.set_trace()
-      print('what')
-
     for i,box in enumerate(boxes):
-      cells[indices[i]['row']][indices[i]['col']].append(box)
+      sorted_rows = sorted(indices[i]['rows'])
+      sorted_cols = sorted(indices[i]['cols'])
+      for i,row_idx in enumerate(sorted_rows):
+        for j,col_idx in enumerate(sorted_cols):
+          if i == 0 and j == 0:
+            contents = {'type': 'cell', 'contents': box}
+          else:
+            contents = {'type': 'span', 'main_row': sorted_rows[0], 'main_col': sorted_cols[0]}
+
+          cells[row_idx][col_idx].append(contents)
 
     out_arr = [['' for x in range(len(cols))] for y in range(len(rows))]
 
     for row_idx, row in enumerate(cells):
       for col_idx, cell in enumerate(row):
-        sorted_labels = [box[4] for box in sorted(cell, key = lambda x: (x[0], x[1]))]
-        flat_labels = []
+        overall = []
+        for cell_info in cell:
+          if 'type' not in cell_info:
+            cell_info = {'type': 'unspecified'}
 
-        for labels in sorted_labels:
-          flat_labels += labels
+          if cell_info['type'] == 'cell':
+            # sorted_labels = cell_info['contents'][4]# [box[4] for box in sorted(cell_info['contents'], key = lambda x: (x[0], x[1]))]
+            # flat_labels = []
 
-        sheet.write(row_idx, col_idx, ' '.join(flat_labels))
+            # for labels in sorted_labels:
+            #   flat_labels += labels
+
+            # import pdb;pdb.set_trace()
+
+            contents = ' '.join(cell_info['contents'][4])
+          elif cell_info['type'] == 'span':
+            # This can later be a special structure for the json
+            # including for the main cell, too
+            contents = 'SPAN_OF(' + str(cell_info['main_row']) + ', ' + str(cell_info['main_col']) + ')'
+          else:
+            contents = ''
+
+          overall.append(contents)
+
+        display_contents = ' '.join(overall)
+        sheet.write(row_idx, col_idx, display_contents)
 
         # Store for json output
-        out_arr[row_idx][col_idx] = ' '.join(flat_labels)
+        out_arr[row_idx][col_idx] = display_contents
 
     with open(json_path, 'w') as f:
       json.dump({'cells': out_arr}, f)
