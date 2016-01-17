@@ -15,8 +15,8 @@ def get_structure(boxes, lines):
   rows = translate_clusters(row_clusters)
   cols = translate_clusters(col_clusters)
 
-  sorted_rows = sorted(rows, key = lambda row: row[1])
-  sorted_cols = sorted(cols, key = lambda col: col[0])
+  sorted_rows = sorted(rows, key = lambda row: (row[1], row[7]))
+  sorted_cols = sorted(cols, key = lambda col: (col[0], col[6]))
 
   scorer.add_score('initial_rows', len(sorted_rows))
   scorer.add_score('initial_cols', len(sorted_cols))
@@ -80,7 +80,7 @@ def translate_clusters(clusters):
   for cluster in clusters:
     labels = []
     boxes = []
-    max_x = max_y = float("-inf")
+    max_x = max_y = max_min_x = max_min_y = float("-inf")
     min_x = min_y = float("inf")
 
     for box in cluster:
@@ -91,7 +91,15 @@ def translate_clusters(clusters):
       min_y = min(min_y, box[1])
       max_y = max(max_y, box[1] + box[3])
 
-    combined.append((min_x, min_y, max_x, max_y, labels, boxes))
+      # To allow sorting of two rows joined by a span (who share
+      # the same min_x, we want to record the maximum min_x of a box
+      # to allow secondary sorting on this. The same applies
+      # with y for rows
+
+      max_min_x = max(max_min_x, box[0])
+      max_min_y = max(max_min_y, box[1])
+
+    combined.append((min_x, min_y, max_x, max_y, labels, boxes, max_min_x, max_min_y))
 
   return combined
 
@@ -166,8 +174,8 @@ def rate_combinations(boxes, lines):
   #   print('row score: ' + str(overall_row_scores[comb]))
   #   print('col score: ' + str(overall_col_scores[comb]))
 
-  row_clusters = clusterer.new_cluster_scores(row_score_matrix, 1.3)
-  col_clusters = clusterer.new_cluster_scores(col_score_matrix, 1.3)
+  row_clusters = clusterer.new_cluster_scores(row_score_matrix, 1.0)
+  col_clusters = clusterer.new_cluster_scores(col_score_matrix, 1.0)
 
   # print('Row clusters found:')
   # for cluster in row_clusters:

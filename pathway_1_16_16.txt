@@ -1,0 +1,38 @@
+Pipeline for individual image:
+
+1. Get JSON API data from Oxford API
+  a. Check for cached JSON
+  b. If none, query API
+2. Find lines in the image (horizontal and vertical)
+  a. Use HoughLinesP to find lines
+  b. Filter based on 'slope'
+3. Get raw OCR boxes from the JSON and get merged OCR boxes
+  a. Get raw boxes by taking bounding boxes at the 'word' level
+  b. Score combinations based on likelihood to be in a cell together
+    - Proximity
+    - Overlap
+    - API info (if in 'line' and/or 'region' together)
+  c. Combine groups likely to be part of the same cell
+4. Find image contours, and extract them hierarchically
+  a. Find contours on the binary image
+5. Get the children (leaf contours) boxes
+  a. Travel the hierarchy to extract boxes with no children
+6. Merge contour boxes with OCR merged boxes
+  a. 'Connect' contour and OCR box pairs iff they overlap > 90%
+  b. Take boxes with only one or no overlap
+7. Overlay text from raw OCR
+  a. Check for overlap of raw OCR word bounding boxes with merged OCR/contour boxes
+  b. Sort by y, then x to join labels
+8. Score, filter, and remove bad lines
+  a. Score lines based on box intersections, distance to boxes
+  b. Remove bad lines (low score, lower score of two with no boxes between
+9. Calculate row and column structure
+  a. Score based on likelihood to be in row/col together
+    - Top/Left/Right/Bottom/Center alignment
+    - Line proximities
+    - Overlaps
+  b. Combine into row/column structure
+10. Output
+  a. Images
+  b. JSON
+  c. Spreadsheet

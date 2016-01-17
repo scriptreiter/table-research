@@ -53,9 +53,9 @@ def combine_clustered_boxes(clusters):
     max_x = max_y = float('-inf')
     labels = []
 
-    # Sort the boxes in the cluster by x and then y
+    # Sort the boxes in the cluster by y and then x
     # to preserve label ordering
-    cluster.sort(key = lambda x: (x[0], x[1]))
+    cluster.sort(key = lambda x: (x[1], x[0]))
 
     for box in cluster:
       min_x = min(min_x, box[0])
@@ -187,8 +187,60 @@ def add_labels(boxes, label_boxes, threshold):
       if overlap_area * 1.0 / min_area > threshold:
         labels.append(label_box)
 
-    label = [' '.join(x[4]) for x in sorted(labels, key = lambda x: (x[0], x[1]))]
+    # Double-check this sorting order, but this is y, then x
+    label = [' '.join(x[4]) for x in sorted(labels, key = lambda x: (x[1], x[0]))]
 
     labeled.append((box[0], box[1], box[2], box[3], label))
 
   return labeled
+
+# This method merges two groups of boxes by calculating overlap
+# Overlapping boxes are connected
+# Then any X-many relationships are resolved into the 'many' side
+def merge_box_groups(group_1, group_2, threshold):
+  conns_1 = [[] for i in range(len(group_1))]
+  conns_2 = [[] for i in range(len(group_2))]
+
+  for i, box_1 in enumerate(group_1):
+    for j, box_2 in enumerate(group_2):
+      horiz_over = max(0, min(box_1[0] + box_1[2], box_2[0] + box_2[2]) - max(box_1[0], box_2[0]))
+      vert_over = max(0, min(box_1[1] + box_1[3], box_2[1] + box_2[3]) - max(box_1[1], box_2[1]))
+
+      overlap_area = horiz_over * vert_over
+      min_area = min(box_1[2] * box_1[3], box_2[2] * box_2[3])
+
+      if overlap_area * 1.0 / min_area > threshold:
+        conns_1[i].append(j)
+        conns_2[j].append(i)
+
+  # We have two ways we could approach this filtering:
+  # 1. Find ones with 1-1 or 1-0, and add the largest of them
+  # 2. For all of them, add the ones in a 1-many, add the many
+  # and then filter with a set. I think this should be equivalent
+  # given that there are no intragroup overlaps
+  # and thus am going to do option 1 for now.
+
+  merged = []
+  for i, conns in enumerate(conns_1):
+    if len(conns) == 0:
+      merged.append(group_1[i])
+    elif len(conns) == 1:
+      merged.append(get_largest(group_1[i], group_2[conns[0]]))
+
+  # Since we already merged the 1-1s above, to avoid
+  # having to deduplicate, we only merge 1-0s here
+  for i, conns in enumerate(conns_2):
+    if len(conns) == 0:
+      merged.append(group_2[i])
+
+  return merged
+
+# Return the larger of the two boxes
+def get_largest(box_1, box_2):
+  area_1 = box_1[2] * box_1[3]
+  area_2 = box_2[2] * box_2[3]
+
+  if area_1 > area_2:
+    return box_1
+  
+  return box_2

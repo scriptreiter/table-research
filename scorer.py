@@ -63,12 +63,16 @@ def check_annotations():
 
         if guess_rows == actual_rows:
           total_correct[score_type + '_rows'] += 1
+        elif score_type == 'initial':
+          print('Missed rows on ' + image + ' (actual=' + str(actual_rows) + ', guessed=' + str(guess_rows) + ')')
 
         if guess_cols == actual_cols:
           total_correct[score_type + '_cols'] += 1
+        elif score_type == 'initial':
+          print('Missed cols on ' + image + ' (actual=' + str(actual_cols) + ', guessed=' + str(guess_cols) + ')')
 
         if guess_rows == actual_rows and guess_cols == actual_cols:
-          total_correct[score_type + '_both']
+          total_correct[score_type + '_both'] += 1
 
         # Record if close
         if abs(guess_rows - actual_rows) < 2:
@@ -78,13 +82,13 @@ def check_annotations():
           total_correct[score_type + '_cols_within_1'] += 1
 
         if abs(guess_rows - actual_rows) < 2 and abs(guess_cols - actual_cols) < 2:
-          total_correct[score_type + '_both_within_1']
+          total_correct[score_type + '_both_within_1'] += 1
 
     else:
       print('Image (' + image + ') not in annotations.')
 
   print('Evaluations:')
-  for eval_type in total_correct:
+  for eval_type in sorted(total_correct):
     print('  Type: ' + eval_type)
     print('    ' + str(total_correct[eval_type]) + ' / ' + str(total_evaluated))
     print('    ' + str(total_correct[eval_type] * 100.0 / total_evaluated) + '%')
@@ -99,7 +103,7 @@ def read_annotations():
 
       img_name = parts[0]
 
-      if len(parts) <= 3:
+      if len(parts) <= 3 or int(parts[3]) == 1 or int(parts[3]) == 2:
         annotations[img_name] = {
           'rows': int(parts[1]),
           'cols': int(parts[2])

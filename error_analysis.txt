@@ -1,0 +1,42 @@
+These are all from simply inspecting the images. A later analysis will look at the drawn rows/cols for these
+
+Missed rows on 2011-06-17_12_47-50.jpg (actual=6, guessed=7)
+-- See below, but likely also due to the legend
+
+Missed cols on 2011-06-17_12_47-50.jpg (actual=7, guessed=8)
+-- It appears that the legend is not getting filtered out of processing, resulting in an extra column. Rows seem to be okay, though... Not marked as spanning on the legend
+
+Missed cols on 2011-06-17_12_36-40.jpg (actual=5, guessed=4)
+-- In this one, the 'A' box seems to be filtered out, as it is not a good rectangle/contour
+
+Missed cols on 2007-08-16_12_16.jpg (actual=2, guessed=3)
+-- This one appears to be a data labeling problem. I seem to have it marked as 2 columns, instead of 3
+
+Missed rows on 2009-06-17_12_10.jpg (actual=4, guessed=5)
+-- There is one 'good' rectangle pulled from the experiment setup image, that may be put into an extra row, and not filtered out correctly. It seems like this should be cut by going with the largest 2nd level one, though.
+
+Missed rows on 2011_8_79-80.jpg (actual=6, guessed=5)
+-- This one is the periodic table one, and it appears to be another data labeling error. I included the legend when labeling, I assume. Thus, this should be correct
+
+Missed rows on 2011_4_4.jpg (actual=7, guessed=4)
+-- This is the white on black image, and some rows seem to get poorly captured, and thus merged
+-- This is ambigous to label, though, on whether the title should be included as a row, or not. Thus, it could also be actual 6, which is still not what we guess
+
+Missed cols on 2011_4_4.jpg (actual=7, guessed=3)
+-- See above, but there are very few rectangles pulled from the contours
+
+Missed rows on 2004_8_25.jpg (actual=15, guessed=1)
+-- This only pulls 3 good rectangles, and these are from images inside of a cell. They line up in a row.
+
+Missed cols on 2004_8_25.jpg (actual=2, guessed=3)
+-- See above
+
+Missed rows on 2005_8_34-35.jpg (actual=2, guessed=3)
+-- This does not seem to filter the legend correctly, either
+-- It is also a slightly ambiguous image
+
+Missed rows on 2005_8_79.jpg (actual=3, guessed=4)
+-- This is a data labeling error. It appears that it should have 4 rows
+
+Missed cols on 2011-08-18_12_56-60.jpg (actual=2, guessed=3)
+-- This does not correctly filter out the image to the side, it appears

@@ -78,7 +78,7 @@ def get_root_contours(rects, hierarchy):
 
   # Now want to select the ones that are a direct child of this one
   # Biggest is likely the table
-  root_rects = [contour for (idx, contour) in rects if hierarchy[0][idx][3] == parent_idx]
+  root_rects = [(idx, contour) for (idx, contour) in rects if hierarchy[0][idx][3] == parent_idx]
 
   return root_rects
 
@@ -100,7 +100,7 @@ def angle_cos(p0, p1, p2):
   return abs(np.dot(d1, d2) / np.sqrt(np.dot(d1, d1)*np.dot(d2, d2)))
 
 def mark_contours(img, contours, output_path, ext, diff_colors=False):
-  colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 0), (0, 255, 255), (255, 0, 255)]
+  colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (255, 255, 0), (0, 255, 255), (255, 0, 255), (0, 0, 128), (0, 128, 0), (128, 0, 0), (128, 128, 0), (0, 128, 128), (128, 0, 128), (128, 255, 128)]
   color_idx = 0
 
   img_copy = img.copy()
