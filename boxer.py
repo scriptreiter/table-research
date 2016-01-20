@@ -188,7 +188,7 @@ def add_labels(boxes, label_boxes, threshold):
         labels.append(label_box)
 
     # Double-check this sorting order, but this is y, then x
-    label = [' '.join(x[4]) for x in sorted(labels, key = lambda x: (x[1], x[0]))]
+    label = [x[4] for x in sorted(labels, key = lambda x: (x[1], x[0]))]
 
     labeled.append((box[0], box[1], box[2], box[3], label))
 
@@ -197,11 +197,12 @@ def add_labels(boxes, label_boxes, threshold):
 # This method merges two groups of boxes by calculating overlap
 # Overlapping boxes are connected
 # Then any X-many relationships are resolved into the 'many' side
-def merge_box_groups(group_1, group_2, threshold):
+def merge_box_groups(group_1, group_2, threshold, bbox):
   conns_1 = [[] for i in range(len(group_1))]
   conns_2 = [[] for i in range(len(group_2))]
 
   for i, box_1 in enumerate(group_1):
+    # Should these check off threshold, instead?
     for j, box_2 in enumerate(group_2):
       horiz_over = max(0, min(box_1[0] + box_1[2], box_2[0] + box_2[2]) - max(box_1[0], box_2[0]))
       vert_over = max(0, min(box_1[1] + box_1[3], box_2[1] + box_2[3]) - max(box_1[1], box_2[1]))
@@ -220,20 +221,55 @@ def merge_box_groups(group_1, group_2, threshold):
   # given that there are no intragroup overlaps
   # and thus am going to do option 1 for now.
 
+  # We only want boxes that overlap the bounding box, but
+  # If it isn't a 1-0, we know the overlap with a cell box is
+  # above the threshold, and don't need to check this case
+  # Thus we only check 1-0 ones for now (for which we could get
+  # away with only checking the second group, technically)
+
   merged = []
   for i, conns in enumerate(conns_1):
     if len(conns) == 0:
-      merged.append(group_1[i])
+      if box_overlap(group_1[i], bbox) > threshold:
+        merged.append(group_1[i])
     elif len(conns) == 1:
-      merged.append(get_largest(group_1[i], group_2[conns[0]]))
+      selector = None
+      if len(conns_2[conns[0]]) == 1:
+        # This is a 1-1 correspondence, and we want the biggest
+        # box, as it is likely more accurate
+        selector = get_largest
+      else:
+        # This is a many-1 correspondence, and we want to take
+        # the 1, being the smaller box
+        # We may be able to make a correct assumption about
+        # which is smallest, but we'll check for now
+        selector = get_smallest
+        
+      merged.append(selector(group_1[i], group_2[conns[0]]))
 
-  # Since we already merged the 1-1s above, to avoid
-  # having to deduplicate, we only merge 1-0s here
   for i, conns in enumerate(conns_2):
     if len(conns) == 0:
-      merged.append(group_2[i])
+      if box_overlap(group_2[i], bbox) > threshold:
+        merged.append(group_2[i])
+    # This needs to check if we already processed, to avoid dedups
+    # We will have processed it only if it is a 1-1
+    elif len(conns) == 1 and len(conns_1[conns[0]]) != 1:
+      # This is guaranteed to be a many-1, thus we
+      # can simply take the smallest
+      merged.append(get_smallest(group_2[i], group_1[conns[0]]))
 
   return merged
+
+# TODO: Refactor so that everything uses this
+# Maybe move it to a more centralized location
+def box_overlap(box_1, box_2):
+  horiz_over = max(0, min(box_1[0] + box_1[2], box_2[0] + box_2[2]) - max(box_1[0], box_2[0]))
+  vert_over = max(0, min(box_1[1] + box_1[3], box_2[1] + box_2[3]) - max(box_1[1], box_2[1]))
+
+  overlap_area = horiz_over * vert_over
+  min_area = min(box_1[2] * box_1[3], box_2[2] * box_2[3])
+
+  return overlap_area * 1.0 / min_area
 
 # Return the larger of the two boxes
 def get_largest(box_1, box_2):
@@ -241,6 +277,15 @@ def get_largest(box_1, box_2):
   area_2 = box_2[2] * box_2[3]
 
   if area_1 > area_2:
+    return box_1
+  
+  return box_2
+
+def get_smallest(box_1, box_2):
+  area_1 = box_1[2] * box_1[3]
+  area_2 = box_2[2] * box_2[3]
+
+  if area_1 <= area_2:
     return box_1
   
   return box_2

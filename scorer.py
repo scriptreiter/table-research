@@ -36,7 +36,8 @@ def check_annotations():
 
   annotations = read_annotations()
 
-  score_types = ['initial', 'cluster', 'line_outside', 'line_inside']
+  # score_types = ['initial', 'cluster', 'line_outside', 'line_inside']
+  score_types = ['cluster']
 
   total_evaluated = 0
   total_correct = {}

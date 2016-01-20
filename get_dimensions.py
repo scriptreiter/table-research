@@ -56,8 +56,8 @@ def run_test(images, base_dir):
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    # if not image.startswith('2011-08-18_12_56-60'):
-    #   continue
+    # if not image.startswith('2004_4_16.jpg'):
+      # continue
 
     print('Processing: ' + image)
 
@@ -73,12 +73,14 @@ def run_test(images, base_dir):
     # of legends, etc.
 
     root_boxes = hallucinator.get_root_contours(h_boxes, hierarchy)
-    child_boxes = hallucinator.contours_to_boxes(hallucinator.get_child_contours(h_boxes, hierarchy))
+    best_root = hallucinator.get_most_nested(root_boxes, hierarchy, h_boxes)
+    best_rects = hallucinator.get_rects(best_root[1], h_boxes)
+    child_boxes = hallucinator.contours_to_boxes(hallucinator.get_child_contours(best_rects, hierarchy))
 
-    merged_boxes = boxer.merge_box_groups(child_boxes, ocr_boxes, 0.9)
+    merged_boxes = boxer.merge_box_groups(child_boxes, ocr_boxes, 0.9, hallucinator.contour_to_box(best_root[0][1]))
 
     # TODO: Ensure that this is sorted right
-    boxes = boxer.add_labels(child_boxes, raw_boxes, 0.9)
+    boxes = boxer.add_labels(merged_boxes, raw_boxes, 0.9)
 
     scores = liner.rate_lines(lines, boxes)
 

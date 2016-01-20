@@ -44,12 +44,55 @@ def get_contours(img_name, base_path, output_path):
 
   return (rects, hierarchy)
 
+def get_rects(idxs, rects):
+  matched = []
+  flattened = {}
+
+  for idx,rect in rects:
+    flattened[idx] = rect
+
+  for idx in idxs:
+    matched.append((idx, flattened[idx]))
+
+  return matched
+
+def get_most_nested(contours, hierarchy, rects):
+  max_total = 0
+  max_contour = contours[0]
+  max_children = []
+
+  for contour in contours:
+    children = get_all_children(contour[0], hierarchy, rects)
+    total_children = len(children)
+    
+    if total_children > max_total:
+      max_total = total_children
+      max_contour = contour
+      max_children = children
+
+  return (max_contour, max_children)
+
 def get_child_contours(rects, hierarchy):
   idxes = [i for (i, c) in rects]
 
   # Select the contours in this group that are child contours
   # These should be cell-level contours, hopefully
   return [contour for (idx, contour) in rects if no_children(idxes, hierarchy, idx)]
+
+def get_all_children(idx, hierarchy, rects):
+  children = []
+  new_children = get_children(hierarchy, idx)
+
+  while len(new_children) > 0:
+    children += new_children
+    grandchildren = []
+
+    for i in new_children:
+      grandchildren += get_children(hierarchy, i)
+
+    new_children = grandchildren
+
+  return [x[0] for x in rects if x[0] in children]
 
 def no_children(idxes, hierarchy, idx):
   children = get_children(hierarchy, idx)
@@ -86,7 +129,7 @@ def get_largest_contour(contours):
   max_area = 0.0
   max_contour = contours[0]
 
-  for contour in contours:
+  for i,contour in contours:
     area = cv2.contourArea(contour)
 
     if area > max_area:
@@ -114,19 +157,21 @@ def mark_contours(img, contours, output_path, ext, diff_colors=False):
 
   cv2.imwrite(output_path + '_' + ext + '.jpg', img_copy)
 
+def contour_to_box(contour):
+  max_x = max_y = float('-inf')
+  min_x = min_y = float('inf')
+
+  for point in contour:
+    max_x = max(max_x, point[0][0])
+    max_y = max(max_y, point[0][1])
+    min_x = min(min_x, point[0][0])
+    min_y = min(min_y, point[0][1])
+
+  # Storing as x, y, width, height)
+  return (min_x, min_y, max_x - min_x, max_y - min_y, '')
 def contours_to_boxes(contours):
   boxes = []
   for contour in contours:
-    max_x = max_y = float('-inf')
-    min_x = min_y = float('inf')
-
-    for point in contour:
-      max_x = max(max_x, point[0][0])
-      max_y = max(max_y, point[0][1])
-      min_x = min(min_x, point[0][0])
-      min_y = min(min_y, point[0][1])
-
-    # Storing as x, y, width, height)
-    boxes.append((min_x, min_y, max_x - min_x, max_y - min_y, ''))
+    boxes.append(contour_to_box(contour))
 
   return boxes
