@@ -1,11 +1,12 @@
 import clusterer
+import os
 import operator
 from itertools import combinations
 
-def get_boxes(data, zoom_level, lines):
+def get_boxes(data, zoom_level, lines, feat_file):
   raw_boxes = get_boxes_from_json(data, zoom_level)
 
-  combined = combine_boxes(raw_boxes, lines)
+  combined = combine_boxes(raw_boxes, lines, feat_file)
 
   return combined, raw_boxes
 
@@ -28,8 +29,8 @@ def get_boxes_from_json(data, zoom_level = 1):
 
   return boxes
 
-def combine_boxes(boxes, lines):
-  box_scores = score_boxes(boxes, lines)
+def combine_boxes(boxes, lines, feat_file):
+  box_scores = score_boxes(boxes, lines, feat_file)
 
   # print('scoring clusters for boxes')
   score_clusters = clusterer.cluster_scores(box_scores, 4.0)
@@ -71,8 +72,14 @@ def combine_clustered_boxes(clusters):
 
   return new_boxes
 
-def score_boxes(boxes, lines):
+def score_boxes(boxes, lines, feature_file):
   box_scores = [[0.0 for box in boxes] for box in boxes]
+
+  # Remove since we're appending for now
+  try:
+    os.remove(feature_file)
+  except OSError:
+    pass
 
   for comb in combinations(enumerate(boxes), 2):
     i = comb[0][0]
@@ -82,6 +89,7 @@ def score_boxes(boxes, lines):
     box_2 = comb[1][1]
 
     scores = {}
+    features = {}
 
     # 1. Higher score the closer together they are
     # horiz and vert (percentage and flat)
@@ -102,6 +110,8 @@ def score_boxes(boxes, lines):
 
     scores['dist_pix'] = 1.0 / (1.0 + dist)
     scores['dist_perc'] = 1.0 / (1.0 + (dist * 1.0 / min_range))
+    features['dist_pix'] = dist
+    features['dist_perc'] = dist * 1.0 / min_range
 
     # 2. Higher score if they overlap (horiz and vert)
     # both percentage and flat
@@ -116,14 +126,18 @@ def score_boxes(boxes, lines):
 
     scores['overlap_pix'] = 1.0 * horiz_over * vert_over
     scores['overlap_perc'] = 1.0 * horiz_over * vert_over / (min_horiz_range * min_vert_range)
+    features['overlap_pix'] = horiz_over * vert_over
+    features['overlap_perc'] = scores['overlap_perc']
 
     # 3. Higher score if they are in an oxford api line together
 
     scores['share_line'] = 1.0 if box_1[5]['line'] == box_2[5]['line'] else 0.0
+    features['share_line'] = 1 if box_1[5]['line'] == box_2[5]['line'] else 0
 
     # 4. Higher score if they are in an oxford api region together
 
     scores['share_region'] = 1.0 if box_1[5]['region'] == box_2[5]['region'] else 0.0
+    features['share_region'] = 1 if box_1[5]['region'] == box_2[5]['region'] else 0
 
     # 5. Higher score if they're aligned horizontally ?
 
@@ -133,16 +147,30 @@ def score_boxes(boxes, lines):
 
     # Check for horizontal line b/w boxes
     scores['no_div_horiz_line'] = 0.0 if line_between(box_1, box_2, lines, 1) else 1.0
+    features['no_div_horiz_line'] = 0 if line_between(box_1, box_2, lines, 1) else 1
 
     # Check for vertical line b/w boxes
     scores['no_div_vert_line'] = 0.0 if line_between(box_1, box_2, lines, 0) else 1.0
+    features['no_div_vert_line'] = 0 if line_between(box_1, box_2, lines, 0) else 1
+
+    # Additional features?
+    # Ratio of areas
+    # Area of box 1
+    # Area of box 2
+    # Left to right distance, and right to left distance
+    # and top to bottom and bottom to top
 
     score = combine_scores(scores)
+    record_features(box_1, box_2, features, feature_file)
 
     box_scores[i][j] = score
     box_scores[j][i] = score
 
   return box_scores
+
+def record_features(box_1, box_2, features, feature_file):
+  with open(feature_file, 'a') as f:
+    f.write(' '.join([str(x) for x in (box_1[0:4] + box_2[0:4])]) + '\n')
 
 def line_between(box1, box2, lines, offset):
   for line in lines[(offset + 1) % 2]:

@@ -56,8 +56,8 @@ def run_test(images, base_dir):
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    # if not image.startswith('2004_4_16.jpg'):
-      # continue
+    # if not image.startswith('2004_8_8-9a.jpg'):
+    #   continue
 
     print('Processing: ' + image)
 
@@ -65,7 +65,7 @@ def run_test(images, base_dir):
 
     lines = liner.get_lines(image, base_dir)
 
-    ocr_boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines)
+    ocr_boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines, img_pref + 'combos/' + image + '.txt')
 
     h_boxes, hierarchy = hallucinator.get_contours(image, base_dir, img_pref + 'box_hallucinations/' + image)
 
@@ -89,6 +89,8 @@ def run_test(images, base_dir):
     new_lines = liner.remove_lines(lines, filtered_lines, scores)
 
     rows, cols = score_rows.get_structure(boxes, new_lines)
+
+    # import pdb;pdb.set_trace()
 
     if verbose:
       print_structure(rows, 'Rows')
