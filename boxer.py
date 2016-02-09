@@ -1,7 +1,9 @@
 import clusterer
 import os
 import operator
+import pickle
 from itertools import combinations
+from functools import cmp_to_key
 
 def get_boxes(data, zoom_level, lines, feat_file):
   raw_boxes = get_boxes_from_json(data, zoom_level)
@@ -30,10 +32,15 @@ def get_boxes_from_json(data, zoom_level = 1):
   return boxes
 
 def combine_boxes(boxes, lines, feat_file):
-  box_scores = score_boxes(boxes, lines, feat_file)
+  # To use the original merging, do this:
+  # box_scores = score_boxes_orig(boxes, lines, feat_file)
 
   # print('scoring clusters for boxes')
-  score_clusters = clusterer.cluster_scores(box_scores, 4.0)
+  # score_clusters = clusterer.cluster_scores(box_scores, 4.0)
+
+  # To use the classifier, do this:
+  box_scores = score_boxes(boxes, lines, feat_file)
+  score_clusters = clusterer.cluster_scores(box_scores, 0.99)
 
   # Now need to translate score_cluster indices into boxes,
   # And then combine the boxes in each cluster
@@ -72,7 +79,7 @@ def combine_clustered_boxes(clusters):
 
   return new_boxes
 
-def score_boxes(boxes, lines, feature_file):
+def score_boxes_orig(boxes, lines, feature_file):
   box_scores = [[0.0 for box in boxes] for box in boxes]
 
   # Remove since we're appending for now
@@ -166,11 +173,171 @@ def score_boxes(boxes, lines, feature_file):
     box_scores[i][j] = score
     box_scores[j][i] = score
 
+  print('Features:')
+  for x in sorted(features.keys()):
+    print(x)
+
   return box_scores
+
+def score_boxes(boxes, lines, feature_file):
+  box_scores = [[0.0 for box in boxes] for box in boxes]
+
+  # Remove since we're appending for now
+  try:
+    os.remove(feature_file)
+  except OSError:
+    pass
+
+  with open('regents/test_classifier.pkl', 'rb') as f:
+    classifier = pickle.load(f)
+
+  features = {}
+
+  for comb in combinations(enumerate(boxes), 2):
+    i = comb[0][0]
+    j = comb[1][0]
+
+    box_1 = comb[0][1]
+    box_2 = comb[1][1]
+
+    scores = {}
+    features = {}
+
+    # 1. Higher score the closer together they are
+    # horiz and vert (percentage and flat)
+    horiz_dist = max(0, max(box_1[0], box_2[0]) - min(box_1[0] + box_1[2], box_2[0] + box_2[2]))
+    vert_dist = max(0, max(box_1[1], box_2[1]) - min(box_1[1] + box_1[3], box_2[1] + box_2[3]))
+
+    min_horiz_range = min(box_1[2], box_2[2])
+    min_vert_range = min(box_1[3], box_2[3])
+
+    # scores['horiz_dist_pix'] = 1.0 / (1.0 + horiz_dist)
+    # scores['horiz_dist_perc'] = 1.0 / (1.0 + (horiz_dist * 1.0 / min_horiz_range))
+
+    # scores['vert_dist_pix'] = 1.0 / (1.0 + vert_dist)
+    # scores['vert_dist_perc'] = 1.0 / (1.0 + (vert_dist * 1.0 / min_vert_range))
+
+    dist = (horiz_dist ** 2 + vert_dist ** 2) ** 0.5
+    min_range = (min_horiz_range ** 2 + min_vert_range ** 2) ** 0.5
+
+    scores['dist_pix'] = 1.0 / (1.0 + dist)
+    scores['dist_perc'] = 1.0 / (1.0 + (dist * 1.0 / min_range))
+    features['dist_pix'] = dist
+    features['dist_perc'] = dist * 1.0 / min_range
+
+    # 2. Higher score if they overlap (horiz and vert)
+    # both percentage and flat
+    horiz_over = max(0, min(box_1[0] + box_1[2], box_2[0] + box_2[2]) - max(box_1[0], box_2[0]))
+    vert_over = max(0, min(box_1[1] + box_1[3], box_2[1] + box_2[3]) - max(box_1[1], box_2[1]))
+
+    # scores['horiz_over_pix'] = horiz_over # Probably will need a weight < 1?
+    # scores['horiz_over_perc'] = horiz_over * 1.0 / min_horiz_range
+
+    # scores['vert_over_pix'] = vert_over
+    # scores['vert_over_perc'] = vert_over * 1.0 / min_vert_range
+
+    scores['overlap_pix'] = 1.0 * horiz_over * vert_over
+    scores['overlap_perc'] = 1.0 * horiz_over * vert_over / (min_horiz_range * min_vert_range)
+    features['overlap_pix'] = horiz_over * vert_over
+    features['overlap_perc'] = scores['overlap_perc']
+
+    # 3. Higher score if they are in an oxford api line together
+
+    scores['share_line'] = 1.0 if box_1[5]['line'] == box_2[5]['line'] else 0.0
+    features['share_line'] = 1 if box_1[5]['line'] == box_2[5]['line'] else 0
+
+    # 4. Higher score if they are in an oxford api region together
+
+    scores['share_region'] = 1.0 if box_1[5]['region'] == box_2[5]['region'] else 0.0
+    features['share_region'] = 1 if box_1[5]['region'] == box_2[5]['region'] else 0
+
+    # 5. Higher score if they're aligned horizontally ?
+
+    # 6. Higher score if they're aligned vertically ?
+
+    # 7. Lower score if they have a line between them vertically or horizontally
+
+    # Check for horizontal line b/w boxes
+    scores['no_div_horiz_line'] = 0.0 if line_between(box_1, box_2, lines, 1) else 1.0
+    features['no_div_horiz_line'] = 0 if line_between(box_1, box_2, lines, 1) else 1
+
+    # Check for vertical line b/w boxes
+    scores['no_div_vert_line'] = 0.0 if line_between(box_1, box_2, lines, 0) else 1.0
+    features['no_div_vert_line'] = 0 if line_between(box_1, box_2, lines, 0) else 1
+
+    # Additional features?
+    # Ratio of areas
+    box_1_area = box_1[2] * box_1[3]
+    box_2_area = box_2[2] * box_2[3]
+    features['ratio_of_areas_1'] = box_1_area * 1.0 / box_2_area
+    features['ratio_of_areas_2'] = box_2_area * 1.0 / box_1_area
+    # Area of box 1
+    features['box_1_area'] = box_1_area
+    # Area of box 2
+    features['box_2_area'] = box_2_area
+    # Left to right distance, and right to left distance
+    features['ltr_dist'] = min(abs(box_1[0] - (box_2[0] + box_2[2])), box_2[0] - (box_1[0] + box_1[2]))
+    # and top to bottom and bottom to top
+    features['ttb_dist'] = min(abs(box_1[1] - (box_2[1] + box_2[3])), box_2[1] - (box_1[1] + box_1[3]))
+
+    # Line in between ignoring overlap
+    features['no_horiz_line_in_middle'] = 0 if line_in_middle(box_1, box_2, lines, 1) else 1
+    features['no_vert_line_in_middle'] = 0 if line_in_middle(box_1, box_2, lines, 0) else 1
+
+    # Distance between centers
+    features['dist_bw_vert_centers'] = abs((box_1[0] + box_1[0] + box_1[2]) - (box_2[0] + box_2[0] + box_2[2])) / 2.0
+    features['dist_bw_horiz_centers'] = abs((box_1[1] + box_1[1] + box_1[3]) - (box_2[1] + box_2[1] + box_2[3])) / 2.0
+
+    # Distance between tops
+    features['dist_bw_lefts'] = abs(box_1[0] - box_2[0])
+    features['dist_bw_tops'] = abs(box_1[1] - box_2[1])
+
+    # Distance between bottoms
+    features['dist_bw_rights'] = abs((box_1[0] + box_1[2]) - (box_2[0] + box_2[2]))
+    features['dist_bw_bottoms'] = abs((box_1[1] + box_1[3]) - (box_2[1] + box_2[3]))
+
+    score = get_classifier_score(features, classifier)
+    record_features(box_1, box_2, features, feature_file)
+
+    box_scores[i][j] = score
+    box_scores[j][i] = score
+
+  if len(features) > 0:
+    print('Features:')
+    for x in sorted(features.keys()):
+      print(x)
+
+  return box_scores
+
+def get_classifier_score(features, classifier):
+  features = [features[x] for x in sorted(features.keys())]
+  pred = classifier.predict([features])
+
+  return pred[0] * 1.0
 
 def record_features(box_1, box_2, features, feature_file):
   with open(feature_file, 'a') as f:
-    f.write(' '.join([str(x) for x in (box_1[0:4] + box_2[0:4])]) + '\n')
+    f.write(','.join([str(x) for x in (box_1[0:4] + box_2[0:4])]))
+
+    for x in sorted(features.keys()):
+      f.write(',' + str(features[x]))
+
+    f.write('\n')
+
+# Line in between without intersection
+def line_in_middle(box1, box2, lines, offset):
+  for line in lines[(offset + 1) % 2]:
+    # Should this be a comparison only b/w the innermost values?
+
+    # Check if box1, line, box2
+    is_bw_1 = box1[offset] + box1[offset + 2] <= line['border'] <= box2[offset]
+
+    # Check if box2, line, box1
+    is_bw_2 = box2[offset] + box2[offset + 2] <= line['border'] <= box1[offset]
+
+    if is_bw_1 or is_bw_2:
+      return True
+  return False
 
 def line_between(box1, box2, lines, offset):
   for line in lines[(offset + 1) % 2]:
@@ -216,11 +383,24 @@ def add_labels(boxes, label_boxes, threshold):
         labels.append(label_box)
 
     # Double-check this sorting order, but this is y, then x
-    label = [x[4] for x in sorted(labels, key = lambda x: (x[1], x[0]))]
+    label = [x[4] for x in sorted(labels, key=cmp_to_key(label_comparator))]
 
     labeled.append((box[0], box[1], box[2], box[3], label))
 
   return labeled
+
+# Comparator for labels with some variance allowed for lines with variable toplines
+def label_comparator(a, b):
+  top_dist = abs(a[1] - b[1])
+  min_height = min(a[3], b[3])
+
+  if top_dist * 1.0 / min_height > 0.25:
+    # This means the difference of the tops
+    # is significant, so sort by it
+    return a[1] - b[1]
+
+  # Otherwise we want to sort by the left edges
+  return a[0] - b[0]
 
 # This method merges two groups of boxes by calculating overlap
 # Overlapping boxes are connected

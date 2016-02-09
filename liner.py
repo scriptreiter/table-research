@@ -10,7 +10,7 @@ def get_lines(img_name, base_path):
   img = cv2.imread(base_path + '/' + img_name)
   gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
   edges = cv2.Canny(gray, 50, 150, apertureSize = 3)
-  cv2.imwrite('regents/canny/' + img_name, edges)
+  # cv2.imwrite('regents/canny/' + img_name, edges)
   # 120, 20, 10 is good. Also 80, 20, 1
   lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 120, minLineLength=40, maxLineGap=2)
 

@@ -57,6 +57,9 @@ def get_rects(idxs, rects):
   return matched
 
 def get_most_nested(contours, hierarchy, rects):
+  if len(contours) < 1:
+    return None
+
   max_total = 0
   max_contour = contours[0]
   max_children = []
@@ -115,9 +118,17 @@ def get_children(hierarchy, idx):
 
 def get_root_contours(rects, hierarchy):
 
+  if len(rects) == 0:
+    return []
+
   # Select the contour in this group with no parents
   # Hopefully there is only one, and this is the whole image
-  parent_idx = [idx for (idx, contour) in rects if hierarchy[0][idx][3] == -1][0]
+  parent_idxes = [idx for (idx, contour) in rects if hierarchy[0][idx][3] == -1]
+
+  if len(parent_idxes) < 1:
+    return []
+
+  parent_idx = parent_idxes[0]
 
   # Now want to select the ones that are a direct child of this one
   # Biggest is likely the table

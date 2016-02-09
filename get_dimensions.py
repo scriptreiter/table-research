@@ -24,12 +24,12 @@ full_img = 'api_test_image_full.jpg'
 output_file = 'detected_boxes.jpg'
 verbose = False
 # full_base_dir = 'images/table_training'
-full_base_dir = 'regents_table'
-img_pref = 'regents/'
+full_base_dir = 'alternate_images' # full_base_dir = 'regents_table'
+img_pref = 'alternate/' # img_pref = 'regents/'
 xlsx_path = 'xlsx_adjusted'
 json_out_path = 'json_out'
 zoom_level = 3
-sleep_delay = 0
+sleep_delay = 5
 
 def main():
   if len(sys.argv) > 1:
@@ -56,8 +56,8 @@ def run_test(images, base_dir):
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    # if not image.startswith('2004_8_8-9a.jpg'):
-    #   continue
+    if not image.startswith('001-teabag-results-table'):
+      continue
 
     print('Processing: ' + image)
 
@@ -74,10 +74,18 @@ def run_test(images, base_dir):
 
     root_boxes = hallucinator.get_root_contours(h_boxes, hierarchy)
     best_root = hallucinator.get_most_nested(root_boxes, hierarchy, h_boxes)
-    best_rects = hallucinator.get_rects(best_root[1], h_boxes)
+    if best_root is None:
+      best_rects = h_boxes
+      if len(h_boxes) > 0:
+        base_box = hallucinator.contour_to_box(h_boxes[0][1])
+      else:
+        base_box = get_full_box(image, base_dir)
+    else:
+      best_rects = hallucinator.get_rects(best_root[1], h_boxes)
+      base_box = hallucinator.contour_to_box(best_root[0][1])
     child_boxes = hallucinator.contours_to_boxes(hallucinator.get_child_contours(best_rects, hierarchy))
 
-    merged_boxes = boxer.merge_box_groups(child_boxes, ocr_boxes, 0.9, hallucinator.contour_to_box(best_root[0][1]))
+    merged_boxes = boxer.merge_box_groups(child_boxes, ocr_boxes, 0.9, base_box)
 
     # TODO: Ensure that this is sorted right
     boxes = boxer.add_labels(merged_boxes, raw_boxes, 0.9)
@@ -116,6 +124,11 @@ def run_test(images, base_dir):
       time.sleep(sleep_delay)
 
   scorer.evaluate()
+
+def get_full_box(image, base_dir):
+ height, width, channels = cv2.imread(base_dir + '/' + image).shape 
+
+ return (0, 0, width, height, '')
 
 def print_structure(clusters, label):
   print('Printing structure (' + label + ')')
