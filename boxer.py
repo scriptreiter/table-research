@@ -5,10 +5,10 @@ import pickle
 from itertools import combinations
 from functools import cmp_to_key
 
-def get_boxes(data, zoom_level, lines, feat_file):
+def get_boxes(data, zoom_level, lines, feat_file, contour_boxes):
   raw_boxes = get_boxes_from_json(data, zoom_level)
 
-  combined = combine_boxes(raw_boxes, lines, feat_file)
+  combined = combine_boxes(raw_boxes, lines, feat_file, contour_boxes)
 
   return combined, raw_boxes
 
@@ -31,7 +31,7 @@ def get_boxes_from_json(data, zoom_level = 1):
 
   return boxes
 
-def combine_boxes(boxes, lines, feat_file):
+def combine_boxes(boxes, lines, feat_file, contour_boxes):
   # To use the original merging, do this:
   # box_scores = score_boxes_orig(boxes, lines, feat_file)
 
@@ -39,7 +39,10 @@ def combine_boxes(boxes, lines, feat_file):
   # score_clusters = clusterer.cluster_scores(box_scores, 4.0)
 
   # To use the classifier, do this:
-  box_scores = score_boxes(boxes, lines, feat_file)
+  box_classifier_scores = score_boxes(boxes, lines, feat_file)
+
+  box_scores = modify_box_scores(boxes, contour_boxes, box_classifier_scores)
+
   score_clusters = clusterer.cluster_scores(box_scores, 0.99)
 
   # Now need to translate score_cluster indices into boxes,
@@ -52,6 +55,44 @@ def combine_boxes(boxes, lines, feat_file):
   return combined
 
   # return boxes # Soon return combined
+
+# This method lowers scores for boxes to prevent merging across
+# cell boundaries
+def modify_box_scores(boxes, c_boxes, scores):
+  threshold = 0.9
+  # First calculate the cells which each box overlaps
+  # This should be only one, but we're using a set to be
+  # careful for now, in case thresholds are lowered
+  overlaps = [set() for i in range(len(boxes))]
+  for i, box_1 in enumerate(boxes):
+    for j, box_2 in enumerate(c_boxes):
+      horiz_over = max(0, min(box_1[0] + box_1[2], box_2[0] + box_2[2]) - max(box_1[0], box_2[0]))
+      vert_over = max(0, min(box_1[1] + box_1[3], box_2[1] + box_2[3]) - max(box_1[1], box_2[1]))
+
+      overlap_area = horiz_over * vert_over
+      min_area = min(box_1[2] * box_1[3], box_2[2] * box_2[3])
+
+      if overlap_area * 1.0 / min_area > threshold:
+        overlaps[i].add(j)
+
+  # Now, for each combination of boxes, we want
+  # to penalize if they do not overlap a shared cell
+  # (if their overlap sets are disjoint)
+
+  for comb in combinations(enumerate(boxes), 2):
+    i = comb[0][0]
+    j = comb[1][0]
+
+    box_1 = comb[0][1]
+    box_2 = comb[1][1]
+
+    if overlaps[i] != overlaps[j] and overlaps[i].isdisjoint(overlaps[j]):
+      # This means they overlap different boxes
+      # For now this will be an absolute penalty
+      scores[i][j] = 0.0
+      scores[j][i] = 0.0
+
+  return scores
 
 def combine_clustered_boxes(clusters):
   new_boxes = []
@@ -384,6 +425,7 @@ def add_labels(boxes, label_boxes, threshold):
 
     # Double-check this sorting order, but this is y, then x
     label = [x[4] for x in sorted(labels, key=cmp_to_key(label_comparator))]
+    # import pdb;pdb.set_trace()
 
     labeled.append((box[0], box[1], box[2], box[3], label))
 

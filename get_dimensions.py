@@ -56,17 +56,18 @@ def run_test(images, base_dir):
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    if not image.startswith('001-teabag-results-table'):
+    if not image.startswith('001-08.06.09.03.jpg'):
       continue
 
     print('Processing: ' + image)
 
+    # Get OCR data from the oxford API
     data = oxford_api.get_json_data(image, base_dir, zoom_level, img_pref);
 
+    # Extract lines from the image
     lines = liner.get_lines(image, base_dir)
 
-    ocr_boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines, img_pref + 'combos/' + image + '.txt')
-
+    # Extract hierarchical contours
     h_boxes, hierarchy = hallucinator.get_contours(image, base_dir, img_pref + 'box_hallucinations/' + image)
 
     # Here we could filter out top level boxes to get rid
@@ -85,10 +86,14 @@ def run_test(images, base_dir):
       base_box = hallucinator.contour_to_box(best_root[0][1])
     child_boxes = hallucinator.contours_to_boxes(hallucinator.get_child_contours(best_rects, hierarchy))
 
+    ocr_boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines, img_pref + 'combos/' + image + '.txt', child_boxes)
+
     merged_boxes = boxer.merge_box_groups(child_boxes, ocr_boxes, 0.9, base_box)
 
     # TODO: Ensure that this is sorted right
     boxes = boxer.add_labels(merged_boxes, raw_boxes, 0.9)
+
+    import pdb;pdb.set_trace()
 
     scores = liner.rate_lines(lines, boxes)
 

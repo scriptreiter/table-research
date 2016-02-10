@@ -5,10 +5,10 @@ from itertools import combinations
 def get_contours(img_name, base_path, output_path):
   img = cv2.imread(base_path + '/' + img_name)
   gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-  # cv2.imwrite('regents/canny/' + img_name + '_gray.jpg', gray)
+  # cv2.imwrite('alternate/canny/' + img_name + '_gray.jpg', gray)
   # edges = cv2.Canny(gray, 30, 80, apertureSize = 5)
-  bin_img = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)[1]
-  # cv2.imwrite('regents/canny/' + img_name + '_adj.jpg', edges)
+  bin_img = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)[1]
+  # cv2.imwrite('alternate/canny/' + img_name + '_bin.jpg', bin_img)
 
   (edges, contours, hierarchy) = cv2.findContours(bin_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
