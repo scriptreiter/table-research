@@ -29,6 +29,7 @@ def evaluate():
 
   print('Evaluating the scores for this run of images')
 
+  import pdb;pdb.set_trace()
   check_annotations()
 
 def check_annotations():

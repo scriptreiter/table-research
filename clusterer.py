@@ -1,4 +1,5 @@
 import itertools
+from collections import deque
 
 def cluster_scores(score_matrix, threshold):
   clusters = []
@@ -35,6 +36,56 @@ def cluster_scores(score_matrix, threshold):
     clusters = new_clusters
 
   return clusters
+
+def newer_cluster_scores(score_matrix, threshold):
+  # Start with a set of all boxes
+  # Then, for any given pair in that set that's not likely to
+  # be in a (col|row) together, split the set. Continue
+  # this until we get a basis? Then need to reconcile
+  # the halves, and reduce, based on composition
+
+  # Make a set with all boxes
+  to_check = deque([set(range(len(score_matrix)))])
+  finalized = set()
+
+  while len(to_check) > 0:
+    cluster = to_check.pop()
+    valid = True
+    for comb in itertools.combinations(cluster, 2):
+      # We want to split if there are any two elements
+      # that should not be in a row together
+      if score_matrix[comb[0]][comb[1]] < threshold:
+        valid = False
+        cluster_copy = cluster.copy()
+
+        cluster.remove(comb[0])
+        cluster_copy.remove(comb[1])
+
+        to_check.append(cluster)
+        to_check.append(cluster_copy)
+
+        break
+
+    # If we made it to here, we checked all the combinations
+    # and they all belong in a column together
+    if valid and cluster not in finalized:
+      finalized.add(frozenset(cluster))
+
+  # Check if any of the sets are proper subsets of another
+  # set in the final group. If so, we do not need the
+  # subset, as the info is elsewhere
+  basis = set()
+  for x in finalized:
+    keep = True
+    for y in finalized:
+      if x < y:
+        keep = False
+        break
+
+    if keep:
+      basis.add(x)
+
+  return basis
 
 def new_cluster_scores(score_matrix, threshold):
   clusters = []

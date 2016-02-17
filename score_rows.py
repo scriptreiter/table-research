@@ -174,8 +174,9 @@ def rate_combinations(boxes, lines):
   #   print('row score: ' + str(overall_row_scores[comb]))
   #   print('col score: ' + str(overall_col_scores[comb]))
 
-  row_clusters = clusterer.new_cluster_scores(row_score_matrix, 1.0)
-  col_clusters = clusterer.new_cluster_scores(col_score_matrix, 1.0)
+  # Might want to do 0.999 later
+  row_clusters = clusterer.newer_cluster_scores(row_score_matrix, 1.0)
+  col_clusters = clusterer.newer_cluster_scores(col_score_matrix, 1.0)
 
   # print('Row clusters found:')
   # for cluster in row_clusters:

@@ -14,7 +14,7 @@ headers = {
 
 params = urllib.parse.urlencode({
     # Request parameters
-    'language': 'unk',
+    'language': 'en',
     'detectOrientation ': 'true',
 })
 

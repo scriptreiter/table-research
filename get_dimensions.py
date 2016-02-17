@@ -29,7 +29,7 @@ img_pref = 'alternate/' # img_pref = 'regents/'
 xlsx_path = 'xlsx_adjusted'
 json_out_path = 'json_out'
 zoom_level = 3
-sleep_delay = 5
+sleep_delay = 0
 
 def main():
   if len(sys.argv) > 1:
@@ -46,6 +46,7 @@ def main():
 
 def run_full_test():
   images = [img for img in os.listdir(full_base_dir) if img.endswith('.jpg')]
+  # images = [img[:-5] for img in os.listdir('alternate/json_cache/lang/') if img.endswith('.json')]
   run_test(images, full_base_dir)
 
 def run_single_test(img_name = full_img):
@@ -56,8 +57,8 @@ def run_test(images, base_dir):
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    if not image.startswith('001-08.06.09.03.jpg'):
-      continue
+    # if not image.startswith('004-tt5-4.jpg'):
+    #   continue
 
     print('Processing: ' + image)
 
@@ -77,10 +78,7 @@ def run_test(images, base_dir):
     best_root = hallucinator.get_most_nested(root_boxes, hierarchy, h_boxes)
     if best_root is None:
       best_rects = h_boxes
-      if len(h_boxes) > 0:
-        base_box = hallucinator.contour_to_box(h_boxes[0][1])
-      else:
-        base_box = get_full_box(image, base_dir)
+      base_box = get_full_box(image, base_dir)
     else:
       best_rects = hallucinator.get_rects(best_root[1], h_boxes)
       base_box = hallucinator.contour_to_box(best_root[0][1])
@@ -92,8 +90,6 @@ def run_test(images, base_dir):
 
     # TODO: Ensure that this is sorted right
     boxes = boxer.add_labels(merged_boxes, raw_boxes, 0.9)
-
-    import pdb;pdb.set_trace()
 
     scores = liner.rate_lines(lines, boxes)
 
