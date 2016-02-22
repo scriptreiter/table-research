@@ -57,8 +57,8 @@ def run_test(images, base_dir):
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    # if not image.startswith('004-tt5-4.jpg'):
-    #   continue
+    if not image.startswith('002-Airplane'):
+      continue
 
     print('Processing: ' + image)
 
@@ -98,6 +98,8 @@ def run_test(images, base_dir):
     new_lines = liner.remove_lines(lines, filtered_lines, scores)
 
     rows, cols = score_rows.get_structure(boxes, new_lines)
+
+    scorer.evaluate_cells(image, boxes)
 
     # import pdb;pdb.set_trace()
 

@@ -45,8 +45,9 @@ def newer_cluster_scores(score_matrix, threshold):
   # the halves, and reduce, based on composition
 
   # Make a set with all boxes
-  to_check = deque([set(range(len(score_matrix)))])
+  to_check = deque([frozenset(range(len(score_matrix)))])
   finalized = set()
+  cache = set()
 
   while len(to_check) > 0:
     cluster = to_check.pop()
@@ -56,20 +57,24 @@ def newer_cluster_scores(score_matrix, threshold):
       # that should not be in a row together
       if score_matrix[comb[0]][comb[1]] < threshold:
         valid = False
-        cluster_copy = cluster.copy()
 
-        cluster.remove(comb[0])
-        cluster_copy.remove(comb[1])
+        split_1 = cluster.difference([comb[0]])
+        split_2 = cluster.difference([comb[1]])
 
-        to_check.append(cluster)
-        to_check.append(cluster_copy)
+        if split_1 not in cache:
+          to_check.append(split_1)
+          cache.add(split_1)
+
+        if split_2 not in cache:
+          to_check.append(split_2)
+          cache.add(split_2)
 
         break
 
     # If we made it to here, we checked all the combinations
     # and they all belong in a column together
     if valid and cluster not in finalized:
-      finalized.add(frozenset(cluster))
+      finalized.add(cluster)
 
   # Check if any of the sets are proper subsets of another
   # set in the final group. If so, we do not need the

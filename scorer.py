@@ -112,3 +112,66 @@ def read_annotations():
         }
 
   return annotations
+
+def evaluate_cells(image, cells):
+  threshold = 0.9
+  gt_cells = []
+  with open('ground_truth/alternate/' + image + '.txt') as f:
+    for line in f:
+      parts = line.split(',')
+      gt_cells.append((int(parts[0]), int(parts[1]), int(parts[2]), int(parts[3]), ','.join(parts[4:]).rstrip('\n')))
+
+  overlaps = [[] for x in range(len(gt_cells))]
+  gt_overlaps = [[] for x in range(len(cells))]
+  # Now, need to find correspondences
+  for j, gt_cell in enumerate(gt_cells):
+    overlaps.append([])
+    for i, cell in enumerate(cells):
+      overlap = get_overlap(cell, gt_cell)
+      if overlap > threshold:
+        overlaps[j].append((i, overlap))
+        gt_overlaps[i].append((j, overlap))
+
+  # This can result in a situation where a cell may be
+  # marked for two difference gt cells. This can happen
+  # if a merged cell overlaps two gt cells or more
+  # We could do a more complex resolution, but for now
+  # we'll do a basic check resolution of first one that
+  # we encounter. Later, this could choose the best overlap or similar
+  available = set(range(len(cells)))
+  official = [None for x in range(len(gt_cells))]
+
+  # If 1-1 relationship, we want to connect these
+  for k in range(len(official)):
+    if len(overlaps[k]) == 1 and len(gt_overlaps[overlaps[k][0][0]]) == 1:
+      official[k] = overlaps[k][0][0]
+      available.remove(official[k])
+
+  # Now, go through the ones that have multiple
+  # For now, try to pick the best overlap. Secondary
+  # sorting by the index of the predicted box for now,
+  # simply to know how it is sorted with equivalent overlap
+  # As noted above, later we should do more complex things,
+  # like overlap pixels, etc.
+
+  # Go through once, and use any that only have single marked ones
+  for k, idx in enumerate(official):
+    if idx is None and len(overlaps[k]) > 0:
+      overlaps[k].sort(key = lambda x: (x[1], x[0]), reverse = True)
+
+      official[k] = next((x[1] for x in overlaps[k] if x[1] in available), None)
+      # Using discard b/c if none of the indices are available,
+      # we can avoid an extra check for the None that is returned
+      available.discard(official[k])
+
+  # Now we have a list of boxes matched to the ground truth boxes,
+  # and just need to check the edit distances, and store the scores
+
+def get_overlap(box_1, box_2):
+  horiz_over = max(0, min(box_1[0] + box_1[2], box_2[0] + box_2[2]) - max(box_1[0], box_2[0]))
+  vert_over = max(0, min(box_1[1] + box_1[3], box_2[1] + box_2[3]) - max(box_1[1], box_2[1]))
+
+  overlap_area = horiz_over * vert_over
+  min_area = min(box_1[2] * box_1[3], box_2[2] * box_2[3])
+
+  return overlap_area * 1.0 / min_area
