@@ -1,0 +1,40 @@
+11,47,117,19,
+129,44,116,21,4
+249,46,113,19,3
+365,47,118,16,2
+482,46,116,20,1
+10,67,117,54,Bar Graph Time spent on daily activities
+129,66,116,52,5 or more items from the checklist
+247,65,116,55,4 items from the checklist
+365,66,115,53,3 items from the checklist
+484,67,114,53,2 or less items from the checklist
+10,123,115,69,Double Bar Graph Class total sports data
+128,122,117,71,6 or more items from the checklist
+246,122,116,71,5 items from the checklist
+365,121,116,72,4 items from the checklist
+482,121,116,74,3 or less items from the checklist
+9,194,117,36,Pictograph Forms of media
+128,195,117,36,4 items from the checklist
+246,196,116,37,3 items from the checklist
+363,196,118,35,2 items from the checklist
+480,195,120,37,1 item from the checklist
+10,233,116,35,Circle Graph Forms of media
+128,233,117,35,4 items from the checklist
+247,233,114,35,3 items from the checklist
+365,233,118,37,2 items from the checklist
+483,233,117,37,1 item from the checklist
+10,270,116,54,Frequency Table For line graph
+129,270,115,54,4 items from the checklist
+245,271,119,54,3 items from the checklist
+366,271,114,54,2 items from the checklist
+482,271,115,55,1 item from the checklist
+9,325,118,74,Line Graph Choice - Change over time
+129,326,117,74,6 or more items from the checklist
+246,327,117,69,5 items from the checklist
+364,326,117,72,4 items from the checklist
+482,327,117,72,3 or less items from the checklist
+10,401,117,53,Stem-and-Leaf Plot
+129,401,116,54,4 or more items from the checklist
+247,400,116,54,3 items from the checklist
+365,401,115,55,2 items from the checklist
+483,401,116,53,1 item from the checklist

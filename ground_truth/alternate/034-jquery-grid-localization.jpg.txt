@@ -1,0 +1,34 @@
+10,10,246,22,Ship Name
+259,10,98,24,Ship Stadt
+359,7,319,24,Ship Land
+8,36,250,22,Vins et alcools Chevalier
+7,60,250,26,Toms Spezialitäten
+9,88,248,20,Hanari Carnes
+9,111,249,24,Victuailles en stock
+8,136,250,23,Suprêmes délices
+9,162,250,22,Hanari Carnes
+9,187,249,22,Chop-suey Chinese
+8,211,251,24,Richter Supermarkt
+9,236,249,22,Wellington Importadora
+8,260,250,24,HILARION-Abastos
+260,34,96,23,Reims
+260,59,99,27,Münster
+260,86,98,23,Rio de Janeiro
+260,110,99,25,Lyon
+261,137,97,23,Charleroi
+260,161,100,23,Rio de Janeiro
+260,186,99,22,Bern
+258,210,101,25,Genève
+259,236,100,23,Resende
+259,261,99,22,San Cristóbal
+359,35,319,23,France
+360,60,319,23,Germany
+360,87,318,22,Brazil
+360,111,318,23,France
+360,136,317,23,Belgium
+360,160,318,24,Brazil
+360,186,318,24,Switzerland
+361,211,317,23,Switzerland
+359,236,321,22,Brazil
+359,260,320,26,Venezuela
+8,287,671,26,Page: 0 angezeigten datensätze 10 1-10 aus 200

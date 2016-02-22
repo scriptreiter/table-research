@@ -1,0 +1,32 @@
+7,8,151,30,Step 1
+159,8,372,30,Step 2
+9,41,149,86,Monthly Line Access (per device)
+159,43,73,86,Shared Minutes
+233,42,74,85,Shared Messages
+312,43,63,85,Shared Data
+376,41,154,86,Monthly Account Access (shared with up to 10 devices)
+8,131,148,187,Smartphones - 0 Basic Phones - 0 Jetpacks/USBs/ Notebooks/Netbooks - 0 Tablets - 0
+159,130,70,28,Unlimited
+161,160,71,31,Unlimited
+160,193,72,28,Unlimited
+159,224,73,31,Unlimited
+159,257,73,29,Unlimited
+158,288,74,32,Unlimited
+234,130,76,28,Unlimited
+232,159,77,30,Unlimited
+233,194,77,26,Unlimited
+234,224,78,30,Unlimited
+234,256,77,27,Unlimited
+235,286,75,32,Unlimited
+313,131,61,27,1 GB
+313,162,59,28,2 GB
+313,194,60,29,4 GB
+313,225,62,30,6 GB
+313,257,62,32,8 GB
+313,290,63,31,10 GB
+378,130,155,31,0
+378,162,152,29,0
+377,194,157,29,0
+378,224,155,30,0
+377,257,155,30,0
+377,288,157,31,00

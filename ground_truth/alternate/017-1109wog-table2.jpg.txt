@@ -1,0 +1,30 @@
+6,33,366,36,Data Type
+372,33,77,35,Resident
+451,34,74,35,Day
+6,69,364,40,Accident/injury data
+4,108,366,32,Staff program evaluations
+3,141,368,39,Camper satisfaction surveys
+5,180,364,33,Parent satisfaction surveys
+5,215,367,36,Informal data
+4,252,366,34,Camper assessments from staff
+5,288,366,32,Formal observational surveys
+6,323,361,34,Developmental outcomes surveys
+6,359,365,36,Curriculum-based learning assessments
+372,72,77,31,86%
+451,72,75,33,83%
+371,106,78,32,85%
+451,105,76,36,68%
+371,144,76,31,80%
+452,143,71,32,68%
+371,179,78,35,74%
+452,180,72,30,92%
+373,216,74,32,55%
+451,213,75,33,57%
+372,250,76,33,55%
+451,250,75,32,32%
+373,286,73,34,28%
+448,288,76,32,33%
+368,323,80,31,20%
+450,323,74,34,10%
+372,357,79,38,8%
+453,359,71,35,13%

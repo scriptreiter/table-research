@@ -1,0 +1,30 @@
+34,36,126,127,B
+161,35,125,127,I
+286,37,124,127,N
+413,37,125,125,G
+540,37,123,125,O
+34,164,124,124,Observation
+160,165,127,123,Quantitative Data
+287,164,124,124,Communicating
+414,164,122,123,Scientific Law
+539,165,126,127,SI
+33,291,126,125,Responding Variable
+160,290,124,127,Physics
+287,290,126,126,Manipulated Variable
+413,289,128,128,Conclusion
+541,294,122,123,Predicting
+34,419,128,124,Data
+162,418,123,124,Controlled Experiment
+287,418,125,125,FREE
+413,417,128,126,Variables
+541,418,123,124,Chemistry
+33,544,128,126,Scientific Theory
+162,546,124,123,Graphs
+288,543,126,124,Inference
+415,544,121,124,Scientific Method
+539,545,126,123,Testable Hypothesis
+36,672,122,125,Qualitative Data
+162,670,124,124,Control Group
+289,670,122,125,Hypothesis
+413,670,127,123,Physical Science
+542,672,122,124,Experiment

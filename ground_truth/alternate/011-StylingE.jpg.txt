@@ -1,0 +1,16 @@
+1,24,147,43,Volcano Name
+154,23,141,44,Location
+304,22,142,43,Last Major Eruption
+456,22,137,41,Type of Eruption
+4,72,145,27,Mt. Lassen
+3,102,146,44,Mt. Hood
+2,148,148,27,Mt. St. Helens
+153,71,146,25,California
+153,101,144,42,Oregon
+155,146,145,30,Washington
+306,68,145,28,1914-17
+305,101,141,44,1790s
+305,150,141,25,1980
+455,72,139,22,Explosive Eruption
+450,101,158,43,Pyroclastic flows and Mudflows
+454,145,148,30,Explosive Eruption

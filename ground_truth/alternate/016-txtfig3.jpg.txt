@@ -1,0 +1,44 @@
+6,3,714,47,Text table 3. Foreign student enrollment In higher education In selected European countries: various years
+6,51,194,77,Country
+203,54,125,73,Year
+329,52,127,74,Enrollment in higher education
+459,52,116,77,Foreign students
+577,53,142,76,Percentage of foreign students
+6,130,193,57,United States
+202,130,123,27,1986
+204,160,123,32,1991
+328,130,127,29,12,670,121
+328,160,130,30,14,527,881
+459,130,109,27,349,610
+462,160,107,27,419,585
+578,132,141,27,2.8
+578,162,142,23,2.9
+8,189,193,63,France
+203,193,122,31,1986
+205,225,119,26,1991
+331,193,119,31,1,289,942
+330,226,121,25,1,840,307
+463,193,108,32,126,762
+463,227,105,26,136,963
+580,193,134,33,9.8
+585,228,126,24,7.4
+11,255,187,62,
+207,253,114,36,1985
+206,291,117,27,1990
+329,255,123,37,1,550,211
+329,293,126,27,1,933,602
+462,258,106,31,79,354
+462,292,107,25,107,075
+582,263,127,31,5.1
+584,295,121,31,5.5
+12,320,188,57,United Kingdom
+207,322,114,31,1985
+209,353,111,29,1990
+329,321,123,34,1,032,491
+329,357,121,22,1,258,188
+460,324,107,29,53,694
+460,354,106,25,80,183
+584,329,125,25,5.2
+586,355,121,25,6.4
+13,382,699,59,NOTES: Enrollment in all levels of higher education. Percentage of foreign student enrollment in graduate levels in science and engineering would be higher.
+10,442,705,31,SOURCE: United Nations Educational, Scientific, and Cultural Organization, Statistical Yearbook, UNESCO, Paris, 1994

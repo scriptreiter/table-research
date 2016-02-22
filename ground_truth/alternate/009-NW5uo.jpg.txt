@@ -1,0 +1,21 @@
+1,0,518,21,Table 1: Data Units, Sources, and Dates
+5,22,124,34,Variable
+141,23,105,32,Dates
+267,24,124,34,Units
+397,24,117,33,Source
+4,61,128,67,Nominal Physical Capital Stock
+147,62,110,66,1950-1990
+267,61,121,67,Billions US$
+398,63,120,69,Nehru and Dhareshwar (1993)
+6,129,126,52,Total Population
+149,129,110,51,1950-1990
+270,133,120,46,Billions
+400,132,127,61,Nehru and Dhareshwar (1993)
+6,184,133,36,Nominal GDP
+153,183,99,37,1950-1990
+274,184,116,36,Billions US$
+413,196,81,23,PWT
+16,221,118,44,Real GDP per capita
+155,224,102,34,1950-1990
+273,222,117,40,2005 US$ per capita
+418,224,88,44,PWT

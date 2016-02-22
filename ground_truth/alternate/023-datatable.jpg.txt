@@ -1,0 +1,39 @@
+5,4,592,31,Parameters for MOC Standard Data Product m1501228
+14,47,154,23,General
+14,71,81,23,MOC Image
+97,71,69,21,m1501228
+12,96,83,22,Orbit
+97,97,69,22,5351
+13,122,83,22,Columns
+98,122,68,23,672
+14,146,81,22,Rows
+98,146,68,22,8704
+13,171,82,21,Orientation
+98,172,70,21,True
+189,46,246,23,Geometry
+189,72,136,20,Latitude
+187,97,138,20,Longitude
+190,121,135,22,Resolution *
+188,146,138,24,Phase Angle
+189,173,136,20,Incidence Angle
+189,198,137,22,Emission Angle
+188,221,138,24,North Azimuth
+189,248,138,21,Slant Range (km)
+189,273,136,38,Spacecraft Altitude (km)
+328,72,108,23,37.22º
+329,97,106,21,27.80º
+328,121,107,22,4.47 meters/pixel
+328,144,108,25,42.97º
+329,172,106,20,42.87º
+329,195,106,24,0.17º
+329,222,105,21,93.70º
+330,247,105,21,408.92
+330,271,106,40,408.92
+456,46,132,23,Engineering
+456,71,103,22,Gain
+456,95,104,25,Offset
+457,123,103,38,Summing Mode (Downtrack)
+562,70,28,22,4A
+564,97,23,21,32
+563,122,25,40,3
+5,325,595,50,Image Description: Sample polygon-cracked plain in Acidalia

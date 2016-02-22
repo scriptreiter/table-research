@@ -1,0 +1,12 @@
+9,14,391,80,Name of cereal
+404,15,391,81,Amount of elemental iron from least to greatest
+10,97,391,43,Coco Puffs
+9,142,393,40,Total
+10,184,394,50,Corn Pops
+13,234,388,43,Cheerios
+11,278,391,38,Fruit Loops
+402,96,391,43,3
+403,143,392,40,5
+404,186,391,46,1
+403,236,389,40,4
+402,278,391,37,2
