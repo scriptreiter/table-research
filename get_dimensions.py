@@ -10,11 +10,13 @@ import time
 import score_rows
 import sub_key
 import oxford_api
+import ai2_api
 import boxer
 import liner
 import spreadsheeter
 import scorer
 import hallucinator
+import cloud_api
 
 # Will need to do some interesting work to see if we need an edge line
 
@@ -24,12 +26,14 @@ full_img = 'api_test_image_full.jpg'
 output_file = 'detected_boxes.jpg'
 verbose = False
 # full_base_dir = 'images/table_training'
-full_base_dir = 'alternate_images' # full_base_dir = 'regents_table'
-img_pref = 'alternate/' # img_pref = 'regents/'
+full_base_dir = 'alternate_images'
+# full_base_dir = 'regents_table'
+img_pref = 'alternate/'
+# img_pref = 'regents/'
 xlsx_path = 'xlsx_adjusted'
 json_out_path = 'json_out'
 zoom_level = 3
-sleep_delay = 0
+sleep_delay = 1
 
 def main():
   if len(sys.argv) > 1:
@@ -53,17 +57,23 @@ def run_single_test(img_name = full_img):
   run_test([img_name], '.')
   
 def run_test(images, base_dir):
+  zoom_prefix = str(zoom_level) + 'x/' if zoom_level > 1 else ''
+
   for image in images:
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    if not image.startswith('002-Airplane'):
-      continue
+    # if not image.startswith('001-08'):
+    #   continue
 
     print('Processing: ' + image)
 
     # Get OCR data from the oxford API
     data = oxford_api.get_json_data(image, base_dir, zoom_level, img_pref);
+
+    ai2_zoom_level = 3
+    # ai2_data = ai2_api.get_json_data(image, base_dir, ai2_zoom_level, img_pref);
+    # ai2_boxes = ai2_api.convert_to_boxes(ai2_data, ai2_zoom_level)
 
     # Extract lines from the image
     lines = liner.get_lines(image, base_dir)
@@ -85,11 +95,18 @@ def run_test(images, base_dir):
     child_boxes = hallucinator.contours_to_boxes(hallucinator.get_child_contours(best_rects, hierarchy))
 
     ocr_boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines, img_pref + 'combos/' + image + '.txt', child_boxes)
+    # ocr_boxes, raw_boxes = boxer.get_boxes(ai2_data, zoom_level, lines, img_pref + 'combos/' + image + '.txt', child_boxes)
+
+    # Merge the oxford ocr boxes with the ai2 boxes
+    # boxer.merge_ocr_boxes(ocr_boxes, ai2_boxes)
 
     merged_boxes = boxer.merge_box_groups(child_boxes, ocr_boxes, 0.9, base_box)
 
+    merged_labels = boxer.merge_ocr_boxes(raw_boxes, [])# ai2_boxes)
+
     # TODO: Ensure that this is sorted right
-    boxes = boxer.add_labels(merged_boxes, raw_boxes, 0.9)
+    # boxes = boxer.add_labels(merged_boxes, merged_labels, 0.9)
+    boxes = cloud_api.add_labels(merged_boxes, base_dir + '/' + zoom_prefix, image, img_pref + 'google_cache/' + zoom_prefix, zoom_level)
 
     scores = liner.rate_lines(lines, boxes)
 
@@ -99,7 +116,9 @@ def run_test(images, base_dir):
 
     rows, cols = score_rows.get_structure(boxes, new_lines)
 
-    scorer.evaluate_cells(image, boxes)
+    predicted_boxes = boxer.predict_missing_boxes(rows, cols, boxes)
+
+    scorer.evaluate_cells(image, img_pref, boxes + predicted_boxes)
 
     # import pdb;pdb.set_trace()
 
@@ -107,15 +126,15 @@ def run_test(images, base_dir):
       print_structure(rows, 'Rows')
       print_structure(cols, 'Cols')
 
-    draw_lines(base_dir + '/' + image, lines, img_pref + 'table_labeling/' + image + '_orig.jpg')
-    draw_lines(base_dir + '/' + image, new_lines, img_pref + 'table_labeling/' + image)
+    # draw_lines(base_dir + '/' + image, lines, img_pref + 'table_labeling/' + image + '_orig.jpg')
+    # draw_lines(base_dir + '/' + image, new_lines, img_pref + 'table_labeling/' + image)
 
-    draw_structure(translate_box_paradigm(raw_boxes), base_dir + '/' + image, img_pref + 'table_structure/' + image + '_raw_boxes.jpg')
-    draw_structure(translate_box_paradigm(boxes), base_dir + '/' + image, img_pref + 'table_structure/' + image + '_merged_boxes.jpg')
-    draw_structure(rows, base_dir + '/' + image, img_pref + 'table_structure/' + image + '_rows.jpg')
-    draw_structure(cols, base_dir + '/' + image, img_pref + 'table_structure/' + image + '_cols.jpg')
-
-    zoom_prefix = str(zoom_level) + 'x/' if zoom_level > 1 else ''
+    # draw_structure(translate_box_paradigm(raw_boxes), base_dir + '/' + image, img_pref + 'table_structure/' + image + '_oxford_ocr.jpg')
+    # draw_structure(translate_box_paradigm(boxes), base_dir + '/' + image, img_pref + 'table_structure/' + image + '_merged_boxes.jpg')
+    # draw_structure(translate_box_paradigm(merged_labels), base_dir + '/' + image, img_pref + 'table_structure/' + image + '_merged_ocr.jpg')
+    # draw_structure(translate_box_paradigm(ai2_boxes), base_dir + '/' + image, img_pref + 'table_structure/' + image + '_ai2_ocr.jpg')
+    # draw_structure(rows, base_dir + '/' + image, img_pref + 'table_structure/' + image + '_rows.jpg')
+    # draw_structure(cols, base_dir + '/' + image, img_pref + 'table_structure/' + image + '_cols.jpg')
     spreadsheeter.output(rows, cols, boxes, img_pref + xlsx_path + '/' + zoom_prefix + image + '.xlsx', img_pref + json_out_path + '/' + zoom_prefix + image + '.json')
 
     if verbose:
@@ -126,6 +145,7 @@ def run_test(images, base_dir):
     if sleep_delay > 0:
       time.sleep(sleep_delay)
 
+  scorer.score_cells_overall()
   scorer.evaluate()
 
 def get_full_box(image, base_dir):

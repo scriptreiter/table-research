@@ -1,6 +1,12 @@
+import Levenshtein
+import os
+
 predicted = {}
 
 current_image = ''
+
+edit_counts = {'total': {}}
+sim_counts = {'total': {}}
 
 def add_score(label, val):
   global predicted # Not necessarily necessary, but good to be explicit
@@ -19,6 +25,9 @@ def set_current_image(image):
 def evaluate():
   global predicted
 
+  import pdb;pdb.set_trace()
+  print('-----------------------')
+  print('Individual image scores\n')
   for image in predicted:
     print('Scores for image: ' + image)
 
@@ -113,10 +122,17 @@ def read_annotations():
 
   return annotations
 
-def evaluate_cells(image, cells):
+def evaluate_cells(image, pref, cells):
+  global edit_counts, sim_counts
   threshold = 0.9
   gt_cells = []
-  with open('ground_truth/alternate/' + image + '.txt') as f:
+  gt_path = 'ground_truth/' + pref + image + '.txt'
+
+  # Only want to do this if we have ground truth labels
+  if not os.path.isfile(gt_path):
+    return
+
+  with open(gt_path) as f:
     for line in f:
       parts = line.split(',')
       gt_cells.append((int(parts[0]), int(parts[1]), int(parts[2]), int(parts[3]), ','.join(parts[4:]).rstrip('\n')))
@@ -159,13 +175,150 @@ def evaluate_cells(image, cells):
     if idx is None and len(overlaps[k]) > 0:
       overlaps[k].sort(key = lambda x: (x[1], x[0]), reverse = True)
 
-      official[k] = next((x[1] for x in overlaps[k] if x[1] in available), None)
+      official[k] = next((x[0] for x in overlaps[k] if x[0] in available), None)
       # Using discard b/c if none of the indices are available,
       # we can avoid an extra check for the None that is returned
       available.discard(official[k])
 
   # Now we have a list of boxes matched to the ground truth boxes,
   # and just need to check the edit distances, and store the scores
+
+  edit_dists = [Levenshtein.distance(gt_label(gt_cells[i]), cell_label(cells[j])) if j is not None else None for i, j in enumerate(official)]
+  sim_dists = [Levenshtein.ratio(gt_label(gt_cells[i]), cell_label(cells[j])) if j is not None else None for i, j in enumerate(official)]
+
+  freqs = {}
+  sim_freqs = {}
+
+  for dist in edit_dists:
+    if dist not in freqs:
+      freqs[dist] = 0
+
+    # Could calculate this later, too
+    if dist not in edit_counts['total']:
+      edit_counts['total'][dist] = 0
+
+    freqs[dist] += 1
+    edit_counts['total'][dist] += 1
+
+  edit_counts[image] = freqs
+
+  for dist in sim_dists:
+    if dist not in sim_freqs:
+      sim_freqs[dist] = 0
+
+    # Could calculate this later, too
+    if dist not in sim_counts['total']:
+      sim_counts['total'][dist] = 0
+
+    sim_freqs[dist] += 1
+    sim_counts['total'][dist] += 1
+
+  edit_counts[image] = freqs
+  sim_counts[image] = sim_freqs
+
+def score_cells_overall():
+  global edit_counts, sim_counts
+
+  print('--------------------------')
+  print('Reporting cell information\n')
+
+  # Report summary information over all images
+  overall = edit_counts['total']
+
+  total_cells = sum(overall.values())
+
+  print('Total cells: ' + str(total_cells))
+
+  print('Cells within edit distance of:')
+  tiers = get_sorted_tiers(overall)
+  report_cumulative(overall, tiers, total_cells)
+
+  # Calculate the X percentile edit distance of each image
+  # and report aggregate info on that
+  perc_threshold = 0.9
+  # Currently only using the summary, but later will probably use the info
+  # so keeping it for now. Also will be useful for detailed debug/inspection
+  perc_summary, perc_info = get_percentile_info(edit_counts, perc_threshold)
+
+  print('Images with 90% of the cells within edit distance of:')
+  total_images = sum(perc_summary.values())
+  perc_tiers = get_sorted_tiers(perc_summary)
+  report_cumulative(perc_summary, perc_tiers, total_images)
+
+  print('Printing based on similarities:')
+
+  # Report summary information over all images
+  overall = sim_counts['total']
+
+  total_cells = sum(overall.values())
+
+  print('Total cells: ' + str(total_cells))
+
+  print('Cells with similarity at or above:')
+  tiers = get_sorted_tiers(overall, True)
+  report_cumulative(overall, tiers, total_cells)
+
+  # Calculate the X percentile edit distance of each image
+  # and report aggregate info on that
+  perc_threshold = 0.9
+  # Currently only using the summary, but later will probably use the info
+  # so keeping it for now. Also will be useful for detailed debug/inspection
+  perc_summary, perc_info = get_percentile_info(sim_counts, perc_threshold, True)
+
+  print('Images with 90% of the cells above similarity of:')
+  total_images = sum(perc_summary.values())
+  perc_tiers = get_sorted_tiers(perc_summary, True)
+  report_cumulative(perc_summary, perc_tiers, total_images)
+
+  print('Done printing cell evaluations')
+
+def report_cumulative(info, tiers, total):
+  curr_total = 0
+  for dist in tiers:
+    curr_total += info[dist]
+    print('  ' + str(dist) + ': ' + str(curr_total) + ' ( ' + str(curr_total * 100.0 / total) + '% )')
+
+  print()
+
+def get_percentile_info(counts, threshold, reverse=False):
+  info = {}
+  summary = {}
+  for img in counts:
+    # Ignore the total
+    if img == 'total':
+      continue
+
+    img_total = sum(counts[img].values())
+
+    curr_total = 0
+    img_tiers = get_sorted_tiers(counts[img], reverse)
+    for dist in img_tiers:
+      curr_total += counts[img][dist]
+
+      if curr_total * 1.0 / img_total >= threshold:
+        info[img] = dist
+
+        if dist not in summary:
+          summary[dist] = 0
+
+        summary[dist] += 1
+        break
+
+  return (summary, info)
+
+def get_sorted_tiers(info, reverse=False):
+  img_tiers = sorted(info.keys() - [None], reverse=reverse)
+
+  if None in info:
+    img_tiers.append(None)
+
+  return img_tiers
+
+def gt_label(box):
+  return box[4]
+
+def cell_label(box):
+  return ' '.join(box[4])
 
 def get_overlap(box_1, box_2):
   horiz_over = max(0, min(box_1[0] + box_1[2], box_2[0] + box_2[2]) - max(box_1[0], box_2[0]))

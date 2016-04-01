@@ -41,9 +41,9 @@ def output(rows, cols, boxes, xlsx_path, json_path):
     for i,box in enumerate(boxes):
       sorted_rows = sorted(indices[i]['rows'])
       sorted_cols = sorted(indices[i]['cols'])
-      for i,row_idx in enumerate(sorted_rows):
+      for k,row_idx in enumerate(sorted_rows):
         for j,col_idx in enumerate(sorted_cols):
-          if i == 0 and j == 0:
+          if k == 0 and j == 0:
             contents = {'type': 'cell', 'contents': box}
           else:
             contents = {'type': 'span', 'main_row': sorted_rows[0], 'main_col': sorted_cols[0]}

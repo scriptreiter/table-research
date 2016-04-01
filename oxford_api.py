@@ -23,12 +23,16 @@ def get_json_data(image, base_path, zoom_level, pref):
   json_cache_file = pref + json_cache_path + '/' + zoom_prefix + image + '.json'
 
   if os.path.isfile(json_cache_file):
-    data = json.loads(open(json_cache_file, 'r').read())
+    j_file = open(json_cache_file, 'r')
+    data = json.loads(j_file.read())
+    j_file.close()
 
     if 'statusCode' not in data or data['statusCode'] != 429:
       return data
 
-  img_data = open(base_path + '/' + zoom_prefix + image, 'rb').read()
+  img_file = open(base_path + '/' + zoom_prefix + image, 'rb')
+  img_data = img_file.read()
+  img_file.close()
 
   try:
     conn = http.client.HTTPSConnection('api.projectoxford.ai')

@@ -119,11 +119,16 @@
                 return curr.join(",");
               }
             ).join("\\n");
-            output += 'echo -e "' + info + '" > ' + images[i] + '.txt\n';
+            output += 'echo -e "' + bashEscape(info) + '" > "' + images[i] + '.txt"\n';
           }
         }
 
         return output;
+      }
+
+      function bashEscape(info) {
+        // Just this for now, but may need to escape others later.
+        return info.replace('!', '\\x21').replace('"', '\\"');
       }
 
       function resetImage(e) {

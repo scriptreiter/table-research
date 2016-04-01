@@ -15,25 +15,37 @@ feature_path = 'regents/combos/features/'
 # Path to save the classifier
 classifier_path = 'regents/classifier.pkl'
 
+# Path to save the list of files in the training set
+train_set_path = 'regents/train_set.txt'
+
+# Path to save the list of files in the testing set
+test_set_path = 'regents/test_set.txt'
+
 def setup():
   key_files = [key_file for key_file in os.listdir(key_path)]
 
-  labels = []
+  train_labels = []
+  test_labels = []
+  train_set = []
 
-  features = []
+  train_features = []
+  test_features = []
+  test_set = []
 
   for key_file in key_files:
     l, f = get_image_info(key_file)
-    labels += l
-    features += f
 
-  num_train = int(len(labels) * 3 / 4)
+    if len(train_labels) < 35000:
+      train_set.append(key_file)
+      train_labels += l
+      train_features += f
+    else:
+      test_set.append(key_file)
+      test_labels += l
+      test_features += f
 
-  train_labels = labels[:num_train]
-  train_features = features[:num_train]
-
-  test_labels = labels[num_train:]
-  test_features = features[num_train:]
+  train_features = trim_features(train_features)
+  test_features = trim_features(test_features)
 
   forest = RandomForestClassifier(n_estimators=100)
   forest.fit(train_features, train_labels)
@@ -68,8 +80,17 @@ def setup():
   with open(classifier_path, 'wb') as f:
     pickle.dump(forest, f)
 
+  with open(train_set_path, 'w') as f:
+    f.write(' \n'.join(train_set))
+
+  with open(test_set_path, 'w') as f:
+    f.write(' \n'.join(test_set))
+
   import pdb;pdb.set_trace()
   print('Done')
+
+def trim_features(feats):
+  return [x[:-3] + x[-1:] for x in feats]
 
 def get_image_info(key_file):
   with open(label_path + key_file, 'r') as f:

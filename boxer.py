@@ -5,8 +5,11 @@ import pickle
 from itertools import combinations
 from functools import cmp_to_key
 
+import ai2_api
+
 def get_boxes(data, zoom_level, lines, feat_file, contour_boxes):
   raw_boxes = get_boxes_from_json(data, zoom_level)
+  # raw_boxes = ai2_api.convert_to_boxes(data, zoom_level)
 
   combined = combine_boxes(raw_boxes, lines, feat_file, contour_boxes)
 
@@ -59,7 +62,7 @@ def combine_boxes(boxes, lines, feat_file, contour_boxes):
 # This method lowers scores for boxes to prevent merging across
 # cell boundaries
 def modify_box_scores(boxes, c_boxes, scores):
-  threshold = 0.9
+  threshold = 0.5
   # First calculate the cells which each box overlaps
   # This should be only one, but we're using a set to be
   # careful for now, in case thresholds are lowered
@@ -179,13 +182,13 @@ def score_boxes_orig(boxes, lines, feature_file):
 
     # 3. Higher score if they are in an oxford api line together
 
-    scores['share_line'] = 1.0 if box_1[5]['line'] == box_2[5]['line'] else 0.0
-    features['share_line'] = 1 if box_1[5]['line'] == box_2[5]['line'] else 0
+#-    scores['share_line'] = 1.0 if box_1[5]['line'] == box_2[5]['line'] else 0.0
+#-    features['share_line'] = 1 if box_1[5]['line'] == box_2[5]['line'] else 0
 
     # 4. Higher score if they are in an oxford api region together
 
-    scores['share_region'] = 1.0 if box_1[5]['region'] == box_2[5]['region'] else 0.0
-    features['share_region'] = 1 if box_1[5]['region'] == box_2[5]['region'] else 0
+#-    scores['share_region'] = 1.0 if box_1[5]['region'] == box_2[5]['region'] else 0.0
+#-    features['share_region'] = 1 if box_1[5]['region'] == box_2[5]['region'] else 0
 
     # 5. Higher score if they're aligned horizontally ?
 
@@ -214,9 +217,9 @@ def score_boxes_orig(boxes, lines, feature_file):
     box_scores[i][j] = score
     box_scores[j][i] = score
 
-  print('Features:')
-  for x in sorted(features.keys()):
-    print(x)
+  # print('Features:')
+  # for x in sorted(features.keys()):
+  #   print(x)
 
   return box_scores
 
@@ -284,13 +287,13 @@ def score_boxes(boxes, lines, feature_file):
 
     # 3. Higher score if they are in an oxford api line together
 
-    scores['share_line'] = 1.0 if box_1[5]['line'] == box_2[5]['line'] else 0.0
-    features['share_line'] = 1 if box_1[5]['line'] == box_2[5]['line'] else 0
+#-    scores['share_line'] = 1.0 if box_1[5]['line'] == box_2[5]['line'] else 0.0
+#-    features['share_line'] = 1 if box_1[5]['line'] == box_2[5]['line'] else 0
 
     # 4. Higher score if they are in an oxford api region together
 
-    scores['share_region'] = 1.0 if box_1[5]['region'] == box_2[5]['region'] else 0.0
-    features['share_region'] = 1 if box_1[5]['region'] == box_2[5]['region'] else 0
+#-    scores['share_region'] = 1.0 if box_1[5]['region'] == box_2[5]['region'] else 0.0
+#-    features['share_region'] = 1 if box_1[5]['region'] == box_2[5]['region'] else 0
 
     # 5. Higher score if they're aligned horizontally ?
 
@@ -343,15 +346,16 @@ def score_boxes(boxes, lines, feature_file):
     box_scores[i][j] = score
     box_scores[j][i] = score
 
-  if len(features) > 0:
-    print('Features:')
-    for x in sorted(features.keys()):
-      print(x)
+  # if len(features) > 0:
+    # print('Features:')
+    # for x in sorted(features.keys()):
+    #   print(x)
 
   return box_scores
 
 def get_classifier_score(features, classifier):
   features = [features[x] for x in sorted(features.keys())]
+  # features = features[:-3] + features[-1:]
   pred = classifier.predict([features])
 
   return pred[0] * 1.0
@@ -539,3 +543,84 @@ def get_smallest(box_1, box_2):
     return box_1
   
   return box_2
+
+def predict_missing_boxes(rows, cols, boxes):
+  indices = {}
+  box_map = {}
+
+  for i, box in enumerate(boxes):
+    box_map[btt(box)] = i
+
+  # We want to mark the row and column to which
+  # each cell belongs, and also calculate the dimensions of
+  # each row and column
+  for i, row in enumerate(rows):
+    for box in row[5]:
+      idx = box_map[btt(box)]
+      indices[idx] = {}
+
+      # This could be made more efficient with a default dict
+      if 'rows' not in indices[idx]:
+        indices[idx]['rows'] = []
+
+      indices[idx]['rows'].append(i)
+
+  for i, col in enumerate(cols):
+    for box in col[5]:
+      idx = box_map[btt(box)]
+
+      # See note about efficiency above
+      if 'cols' not in indices[idx]:
+        indices[idx]['cols'] = []
+
+      indices[idx]['cols'].append(i)
+
+  cells = [[False for x in range(len(cols))] for y in range(len(rows))]
+
+  for i,box in enumerate(boxes):
+    for k,row_idx in enumerate(indices[i]['rows']):
+      for j,col_idx in enumerate(indices[i]['cols']):
+        cells[row_idx][col_idx] = True
+
+  # Calculate bbox for predicted missing boxes
+  missing_boxes = []
+  for i, row in enumerate(cells):
+    for j, cell in enumerate(row):
+      if not cell:
+        try:
+          box_left = min([box[0] for box in cols[j][5] if min(indices[box_map[btt(box)]]['cols']) == j])
+          box_right = max([box[0] + box[2] for box in cols[j][5] if max(indices[box_map[btt(box)]]['cols']) == j])
+
+          box_top = min([box[1] for box in rows[i][5] if min(indices[box_map[btt(box)]]['rows']) == i])
+          box_bottom = max([box[1] + box[3] for box in rows[i][5] if max(indices[box_map[btt(box)]]['rows']) == i])
+
+          # Mark the missing box
+          missing_boxes.append([box_left, box_top, box_right - box_left, box_bottom - box_top, []])
+        except ValueError as e:
+          print('Problem with adding boxes: ' + str(e))
+
+  return missing_boxes
+
+def btt(box):
+  return tuple(box[:4])
+
+def merge_ocr_boxes(raw_boxes, ai2_boxes, combo=False):
+  threshold = 0.5
+  r_to_a = [[] for i in range(len(raw_boxes))]
+  a_to_r = [[] for i in range(len(ai2_boxes))]
+
+  for r, r_box in enumerate(raw_boxes):
+    for a, a_box in enumerate(ai2_boxes):
+
+      if box_overlap(r_box, a_box) > threshold:
+        r_to_a[r].append(a)
+        a_to_r[a].append(r)
+
+  # For now we'll take the raw box if there's a conflict
+  merged = []
+
+  for i, conns in enumerate(a_to_r):
+    if len(conns) < 1:
+      merged.append(ai2_boxes[i])
+
+  return raw_boxes + merged
