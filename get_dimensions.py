@@ -17,6 +17,8 @@ import spreadsheeter
 import scorer
 import hallucinator
 import cloud_api
+import spacer
+import voronoi
 
 # Will need to do some interesting work to see if we need an edge line
 
@@ -26,16 +28,16 @@ full_img = 'api_test_image_full.jpg'
 output_file = 'detected_boxes.jpg'
 verbose = False
 # full_base_dir = 'images/table_training'
-## full_base_dir = 'alternate_images'
-full_base_dir = 'NYSEDREGENTS/test_flat'
+full_base_dir = 'alternate_images'
+# full_base_dir = 'NYSEDREGENTS/test_flat'
 # full_base_dir = 'regents_table'
-## img_pref = 'alternate/'
-img_pref = 'NYSEDREGENTS/test_info/'
+img_pref = 'alternate/'
+# img_pref = 'NYSEDREGENTS/test_info/'
 # img_pref = 'regents/'
 xlsx_path = 'xlsx_adjusted'
 json_out_path = 'json_out'
 zoom_level = 3
-sleep_delay = 1
+sleep_delay = 0
 
 def main():
   if len(sys.argv) > 1:
@@ -65,7 +67,7 @@ def run_test(images, base_dir):
     # Set the current image for the evaluation scorer
     scorer.set_current_image(image)
 
-    # if not image.startswith('001-08'):
+    # if not image.startswith('009-NW'):
     #   continue
 
     print('Processing: ' + image)
@@ -96,13 +98,22 @@ def run_test(images, base_dir):
       base_box = hallucinator.contour_to_box(best_root[0][1])
     child_boxes = hallucinator.contours_to_boxes(hallucinator.get_child_contours(best_rects, hierarchy))
 
-    ocr_boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines, img_pref + 'combos/' + image + '.txt', child_boxes)
+    # gt_boxes = get_gt_boxes(image, img_pref)
+
+    margins = spacer.get_whitespace(image, base_dir)
+
+    ocr_boxes, raw_boxes = boxer.get_boxes(data, zoom_level, lines, img_pref + 'combos/' + image + '.txt', child_boxes, margins, img_pref + 'google_cache/' + zoom_prefix, base_dir + '/' + zoom_prefix, image)
+
+    # box_points = get_v_points(raw_boxes)
+    # voronoi.process_image_points(image, base_dir, img_pref + 'voronoi/', box_points)
+
     # ocr_boxes, raw_boxes = boxer.get_boxes(ai2_data, zoom_level, lines, img_pref + 'combos/' + image + '.txt', child_boxes)
 
     # Merge the oxford ocr boxes with the ai2 boxes
     # boxer.merge_ocr_boxes(ocr_boxes, ai2_boxes)
 
     merged_boxes = boxer.merge_box_groups(child_boxes, ocr_boxes, 0.9, base_box)
+    # merged_boxes = gt_boxes
 
     merged_labels = boxer.merge_ocr_boxes(raw_boxes, [])# ai2_boxes)
 
@@ -118,9 +129,9 @@ def run_test(images, base_dir):
 
     rows, cols = score_rows.get_structure(boxes, new_lines)
 
-    predicted_boxes = boxer.predict_missing_boxes(rows, cols, boxes)
+    # predicted_boxes = boxer.predict_missing_boxes(rows, cols, boxes)
 
-    scorer.evaluate_cells(image, img_pref, boxes + predicted_boxes)
+    scorer.evaluate_cells(image, img_pref, boxes)# + predicted_boxes)
 
     # import pdb;pdb.set_trace()
 
@@ -170,6 +181,19 @@ def translate_box_paradigm(boxes):
 
   return new_boxes
 
+def get_v_points(boxes):
+  points = []
+
+  for box in boxes:
+    points.append(
+      [
+        box[0] + int(box[2] / 2),
+        box[1] + int(box[3] / 2)
+      ]
+    )
+
+  return points
+
 def draw_structure(boxes, img_path, output_img):
   img = cv2.imread(img_path)
 
@@ -190,6 +214,22 @@ def draw_lines(img_path, lines, output_file):
     cv2.line(img, (line['border'], line['start']), (line['border'], line['end']), (0, 0, 255), 1);
 
   cv2.imwrite(output_file, img)
+
+def get_gt_boxes(image, pref):
+  gt_cells = []
+  gt_path = 'ground_truth/' + pref + image + '.txt'
+
+  # Only want to do this if we have ground truth labels
+  if not os.path.isfile(gt_path):
+    return []
+
+  with open(gt_path) as f:
+    for line in f:
+      parts = line.split(',')
+      gt_cells.append((int(parts[0]), int(parts[1]), int(parts[2]), int(parts[3]), ','.join(parts[4:]).rstrip('\n')))
+  pass
+
+  return gt_cells
 
 if __name__ == '__main__':
   main()

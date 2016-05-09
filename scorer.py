@@ -8,6 +8,8 @@ current_image = ''
 edit_counts = {'total': {}}
 sim_counts = {'total': {}}
 
+extra_counts = {}
+
 def add_score(label, val):
   global predicted # Not necessarily necessary, but good to be explicit
   global current_image # ^^^
@@ -123,8 +125,8 @@ def read_annotations():
   return annotations
 
 def evaluate_cells(image, pref, cells):
-  global edit_counts, sim_counts
-  threshold = 0.9
+  global edit_counts, sim_counts, extra_count
+  threshold = 0.5 # MARKER
   gt_cells = []
   gt_path = 'ground_truth/' + pref + image + '.txt'
 
@@ -180,6 +182,13 @@ def evaluate_cells(image, pref, cells):
       # we can avoid an extra check for the None that is returned
       available.discard(official[k])
 
+  # We want to report cells that are 'detected' but don't exist, too
+  extra_count = len(available)
+  if extra_count not in extra_counts:
+    extra_counts[extra_count] = 0
+
+  extra_counts[extra_count] += 1
+
   # Now we have a list of boxes matched to the ground truth boxes,
   # and just need to check the edit distances, and store the scores
 
@@ -217,7 +226,7 @@ def evaluate_cells(image, pref, cells):
   sim_counts[image] = sim_freqs
 
 def score_cells_overall():
-  global edit_counts, sim_counts
+  global edit_counts, sim_counts, extra_counts
 
   print('--------------------------')
   print('Reporting cell information\n')
@@ -269,6 +278,12 @@ def score_cells_overall():
   total_images = sum(perc_summary.values())
   perc_tiers = get_sorted_tiers(perc_summary, True)
   report_cumulative(perc_summary, perc_tiers, total_images)
+
+  # Now report extra count information (cells that were predicted
+  # but not matched to any ground truth cells
+  print('Images with X extra cells predicted:')
+  tiers = get_sorted_tiers(extra_counts)
+  report_cumulative(extra_counts, tiers, total_images)
 
   print('Done printing cell evaluations')
 

@@ -6,12 +6,18 @@ from itertools import combinations
 from functools import cmp_to_key
 
 import ai2_api
+import cloud_api
+import distance_transform
 
-def get_boxes(data, zoom_level, lines, feat_file, contour_boxes):
+def get_boxes(data, zoom_level, lines, feat_file, contour_boxes, margins, cache_base, img_base, image):
   raw_boxes = get_boxes_from_json(data, zoom_level)
   # raw_boxes = ai2_api.convert_to_boxes(data, zoom_level)
 
-  combined = combine_boxes(raw_boxes, lines, feat_file, contour_boxes)
+  # raw_boxes = cloud_api.get_image_boxes(cache_base, img_base, image, zoom_level)
+
+  dist_imgs = distance_transform.get_transform(img_base, image)
+
+  combined = combine_boxes(raw_boxes, lines, feat_file, contour_boxes, margins, dist_imgs)
 
   return combined, raw_boxes
 
@@ -34,7 +40,7 @@ def get_boxes_from_json(data, zoom_level = 1):
 
   return boxes
 
-def combine_boxes(boxes, lines, feat_file, contour_boxes):
+def combine_boxes(boxes, lines, feat_file, contour_boxes, margins, dist_imgs):
   # To use the original merging, do this:
   # box_scores = score_boxes_orig(boxes, lines, feat_file)
 
@@ -42,9 +48,13 @@ def combine_boxes(boxes, lines, feat_file, contour_boxes):
   # score_clusters = clusterer.cluster_scores(box_scores, 4.0)
 
   # To use the classifier, do this:
-  box_classifier_scores = score_boxes(boxes, lines, feat_file)
+  print('start')
+  box_classifier_scores = score_boxes(boxes, lines, feat_file, dist_imgs)
+  print('end')
 
   box_scores = modify_box_scores(boxes, contour_boxes, box_classifier_scores)
+
+#   box_scores = prevent_margin_crossing(boxes, margins, box_classifier_scores)
 
   score_clusters = clusterer.cluster_scores(box_scores, 0.99)
 
@@ -223,7 +233,7 @@ def score_boxes_orig(boxes, lines, feature_file):
 
   return box_scores
 
-def score_boxes(boxes, lines, feature_file):
+def score_boxes(boxes, lines, feature_file, dist_imgs):
   box_scores = [[0.0 for box in boxes] for box in boxes]
 
   # Remove since we're appending for now
@@ -246,6 +256,7 @@ def score_boxes(boxes, lines, feature_file):
 
     scores = {}
     features = {}
+    new_features = {}
 
     # 1. Higher score the closer together they are
     # horiz and vert (percentage and flat)
@@ -340,7 +351,15 @@ def score_boxes(boxes, lines, feature_file):
     features['dist_bw_rights'] = abs((box_1[0] + box_1[2]) - (box_2[0] + box_2[2]))
     features['dist_bw_bottoms'] = abs((box_1[1] + box_1[3]) - (box_2[1] + box_2[3]))
 
+    # Distance transform features
+    new_features['dist_trans_tb'] = get_tb_dt(dist_imgs[0], box_1, box_2)
+    new_features['dist_trans_tb_scaled'] = get_tb_dt(dist_imgs[1], box_1, box_2)
+
+    new_features['dist_trans_lr'] = get_lr_dt(dist_imgs[0], box_1, box_2)
+    new_features['dist_trans_lr_scaled'] = get_lr_dt(dist_imgs[1], box_1, box_2)
+
     score = get_classifier_score(features, classifier)
+    features.update(new_features)
     record_features(box_1, box_2, features, feature_file)
 
     box_scores[i][j] = score
@@ -352,6 +371,31 @@ def score_boxes(boxes, lines, feature_file):
     #   print(x)
 
   return box_scores
+
+def get_tb_dt(img, box_1, box_2):
+  if vert_overlap(box_1, box_2) > 0:
+    return 0
+
+  left = min(box_1[0], box_2[0])
+  right = max(box_1[0] + box_1[2], box_2[0] + box_2[2])
+  top = min(box_1[1] + box_1[3], box_2[1], box_2[3])
+  bot = max(box_1[1], box_2[1])
+
+  return max_val(img, left, top, right, bot)
+
+def get_lr_dt(img, box_1, box_2):
+  if horiz_overlap(box_1, box_2) > 0:
+    return 0
+
+  left = min(box_1[0] + box_1[2], box_2[0] + box_2[2])
+  right = max(box_1[0], box_2[0])
+  top = min(box_1[1], box_2[1])
+  bot = max(box_1[1] + box_1[3], box_2[1], box_2[3])
+
+  return max_val(img, left, top, right, bot)
+
+def max_val(img, left, top, right, bot):
+  return img[top:(bot+1), left:(right+1)].max()
 
 def get_classifier_score(features, classifier):
   features = [features[x] for x in sorted(features.keys())]
@@ -401,6 +445,7 @@ def line_between(box1, box2, lines, offset):
 
     # Check if the line overlaps with box2
     intersects_2 = max(0, min(line['end'], box2[alt_offset] + box2[alt_offset + 2]) - max(line['start'], box2[alt_offset]))
+
     if (is_bw_1 or is_bw_2) and (intersects_1 or intersects_2):
       return True
 
@@ -514,11 +559,17 @@ def merge_box_groups(group_1, group_2, threshold, bbox):
 
   return merged
 
+def horiz_overlap(box_1, box_2):
+  return min(box_1[0] + box_1[2], box_2[0] + box_2[2]) - max(box_1[0], box_2[0])
+
+def vert_overlap(box_1, box_2):
+  return min(box_1[1] + box_1[3], box_2[1] + box_2[3]) - max(box_1[1], box_2[1])
+
 # TODO: Refactor so that everything uses this
 # Maybe move it to a more centralized location
 def box_overlap(box_1, box_2):
-  horiz_over = max(0, min(box_1[0] + box_1[2], box_2[0] + box_2[2]) - max(box_1[0], box_2[0]))
-  vert_over = max(0, min(box_1[1] + box_1[3], box_2[1] + box_2[3]) - max(box_1[1], box_2[1]))
+  horiz_over = max(0, horiz_overlap(box_1, box_2))
+  vert_over = max(0, vert_overlap(box_1, box_2))
 
   overlap_area = horiz_over * vert_over
   min_area = min(box_1[2] * box_1[3], box_2[2] * box_2[3])
@@ -624,3 +675,67 @@ def merge_ocr_boxes(raw_boxes, ai2_boxes, combo=False):
       merged.append(ai2_boxes[i])
 
   return raw_boxes + merged
+
+def prevent_margin_crossing(boxes, margins, scores):
+  for comb in combinations(enumerate(boxes), 2):
+    i = comb[0][0]
+    j = comb[1][0]
+
+    box_1 = comb[0][1]
+    box_2 = comb[1][1]
+
+    if scores[i][j] != 0.0 and (col_between(box_1, box_2, margins[0]) or row_between(box_1, box_2, margins[1])):
+      # This means they overlap different boxes
+      # For now this will be an absolute penalty
+      scores[i][j] = 0.0
+      scores[j][i] = 0.0
+
+  return scores
+
+def col_between(box_1, box_2, cols):
+  for col in cols:
+    # If b/w box 1's right and box 2's left
+    is_bw_1 = box_1[0] + box_1[2] <= col[1] <= box_2[0]
+
+    # If b/w box 2's right and box 1's left
+    is_bw_2 = box_2[0] + box_2[2] <= col[1] <= box_1[0]
+
+    # Check if the segment overlaps the vertical spread of either box
+    # If topmost bottom > bottommost top 
+    overlap_1 = max(0, min(box_1[1] + box_1[3], col[0] + col[2]) - max(box_1[1], col[0])) / box_1[3]
+
+    overlap_2 = max(0, min(box_2[1] + box_2[3], col[0] + col[2]) - max(box_2[1], col[0])) / box_2[3]
+
+    intersects_1 = overlap_1 > 0.5
+    intersects_2 = overlap_2 > 0.5
+
+    # If we found one between, we can stop checking
+    if (is_bw_1 or is_bw_2) and (intersects_1 and intersects_2):
+      return True
+
+  # No columns were found between
+  return False
+
+def row_between(box_1, box_2, rows):
+  for row in rows:
+    # If b/w box 1's bottom and box 2's top
+    is_bw_1 = box_1[1] + box_1[3] <= row[0] <= box_2[1]
+
+    # If b/w box 2's bottom and box 1's top
+    is_bw_2 = box_2[1] + box_2[3] <= row[0] <= box_1[1]
+
+    # Check if the segment overlaps the horizontal spread of either box
+    # If leftmost right > rightmost left 
+    overlap_1 = max(0, min(box_1[0] + box_1[2], row[1] + row[2]) - max(box_1[0], row[1])) * 1.0 / box_1[2]
+
+    overlap_2 = max(0, min(box_2[0] + box_2[2], row[1] + row[2]) - max(box_2[0], row[1])) * 1.0 / box_2[2]
+
+    intersects_1 = overlap_1 > 0.5
+    intersects_2 = overlap_2 > 0.5
+
+    # If we found one between, we can stop checking
+    if (is_bw_1 or is_bw_2) and (intersects_1 and intersects_2):
+      return True
+
+  # No rows were found between
+  return False

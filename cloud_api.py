@@ -17,7 +17,7 @@ def query_google_ocr(image_content):
       ['https://www.googleapis.com/auth/cloud-platform'])
   credentials.authorize(http)
 
-  service = build('vision', 'v1', http, discoveryServiceUrl=API_DISCOVERY_FILE)
+  service = build('vision', 'v1', http=http, discoveryServiceUrl=API_DISCOVERY_FILE)
 
   service_request = service.images().annotate(
     body={
@@ -49,13 +49,13 @@ def get_labels(response, combine=False):
 def label_boxes(detections):
   boxes = []
   for det in detections:
-    xs = [x['x'] for x in det['boundingPoly']]
-    ys = [x['y'] for x in det['boundingPoly']]
+    xs = [x['x'] for x in det['boundingPoly']['vertices'] if 'x' in x]
+    ys = [x['y'] for x in det['boundingPoly']['vertices'] if 'y' in x]
 
     min_x = min(xs)
-    min_y = min(xs)
+    min_y = min(ys)
 
-    boxes.append((min_x, min_y, max(xs) - min_x, max(ys) - min_y, det['description']))
+    boxes.append((min_x, min_y, max(max(xs) - min_x, 1), max(max(ys) - min_y, 1), det['description']))
 
   return boxes
 
@@ -74,7 +74,10 @@ def get_cell_label(cache_base, img_base, photo_file, box, zoom):
 
     cell = img[y1:y2, x1:x2]
 
-    retval, cell_buffer = cv2.imencode('.jpg', cell)
+    try:
+      retval, cell_buffer = cv2.imencode('.jpg', cell)
+    except:
+      return ''
 
     image_content = base64.b64encode(cell_buffer).decode()
 
@@ -95,3 +98,29 @@ def add_labels(boxes, image_base, image_path, cache_path, zoom):
     labeled.append((box[0], box[1], box[2], box[3], [label]))
 
   return labeled
+
+def get_image_boxes(cache_base, img_base, photo_file, zoom):
+  cache_path = cache_base + photo_file + '.json'
+
+  if os.path.isfile(cache_path):
+    with open(cache_path, 'r') as cache_file:
+      response = json.loads(cache_file.read())
+  else:
+    img = cv2.imread(img_base + photo_file)
+
+    try:
+      retval, cell_buffer = cv2.imencode('.jpg', img)
+    except:
+      return []
+
+    image_content = base64.b64encode(cell_buffer).decode()
+
+    response = query_google_ocr(image_content)
+
+    if 'responses' in response:
+      with open(cache_path, 'w') as cache_file:
+        json.dump(response, cache_file)
+    else:
+      return []
+
+  return get_labels(response, combine=False)
