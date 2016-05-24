@@ -48,9 +48,7 @@ def combine_boxes(boxes, lines, feat_file, contour_boxes, margins, dist_imgs):
   # score_clusters = clusterer.cluster_scores(box_scores, 4.0)
 
   # To use the classifier, do this:
-  print('start')
   box_classifier_scores = score_boxes(boxes, lines, feat_file, dist_imgs)
-  print('end')
 
   box_scores = modify_box_scores(boxes, contour_boxes, box_classifier_scores)
 
@@ -185,8 +183,8 @@ def score_boxes_orig(boxes, lines, feature_file):
     # scores['vert_over_pix'] = vert_over
     # scores['vert_over_perc'] = vert_over * 1.0 / min_vert_range
 
-    scores['overlap_pix'] = 1.0 * horiz_over * vert_over
-    scores['overlap_perc'] = 1.0 * horiz_over * vert_over / (min_horiz_range * min_vert_range)
+#     scores['overlap_pix'] = 1.0 * horiz_over * vert_over
+#     scores['overlap_perc'] = 1.0 * horiz_over * vert_over / (min_horiz_range * min_vert_range)
     features['overlap_pix'] = horiz_over * vert_over
     features['overlap_perc'] = scores['overlap_perc']
 
@@ -242,7 +240,8 @@ def score_boxes(boxes, lines, feature_file, dist_imgs):
   except OSError:
     pass
 
-  with open('regents/test_classifier.pkl', 'rb') as f:
+  with open('classifier/test_classifier.pkl', 'rb') as f:
+  # with open('regents/test_classifier.pkl', 'rb') as f:
     classifier = pickle.load(f)
 
   features = {}
@@ -256,7 +255,6 @@ def score_boxes(boxes, lines, feature_file, dist_imgs):
 
     scores = {}
     features = {}
-    new_features = {}
 
     # 1. Higher score the closer together they are
     # horiz and vert (percentage and flat)
@@ -352,14 +350,15 @@ def score_boxes(boxes, lines, feature_file, dist_imgs):
     features['dist_bw_bottoms'] = abs((box_1[1] + box_1[3]) - (box_2[1] + box_2[3]))
 
     # Distance transform features
-    new_features['dist_trans_tb'] = get_tb_dt(dist_imgs[0], box_1, box_2)
-    new_features['dist_trans_tb_scaled'] = get_tb_dt(dist_imgs[1], box_1, box_2)
+    # new_features = {}
+    # features['dist_trans_tb'] = get_tb_dt(dist_imgs[0], box_1, box_2)
+    features['dist_trans_tb_scaled'] = get_tb_dt(dist_imgs[1], box_1, box_2)
 
-    new_features['dist_trans_lr'] = get_lr_dt(dist_imgs[0], box_1, box_2)
-    new_features['dist_trans_lr_scaled'] = get_lr_dt(dist_imgs[1], box_1, box_2)
+    # features['dist_trans_lr'] = get_lr_dt(dist_imgs[0], box_1, box_2)
+    features['dist_trans_lr_scaled'] = get_lr_dt(dist_imgs[1], box_1, box_2)
 
     score = get_classifier_score(features, classifier)
-    features.update(new_features)
+    # features.update(new_features)
     record_features(box_1, box_2, features, feature_file)
 
     box_scores[i][j] = score
@@ -374,7 +373,7 @@ def score_boxes(boxes, lines, feature_file, dist_imgs):
 
 def get_tb_dt(img, box_1, box_2):
   if vert_overlap(box_1, box_2) > 0:
-    return 0
+    return -1
 
   left = min(box_1[0], box_2[0])
   right = max(box_1[0] + box_1[2], box_2[0] + box_2[2])
@@ -385,7 +384,7 @@ def get_tb_dt(img, box_1, box_2):
 
 def get_lr_dt(img, box_1, box_2):
   if horiz_overlap(box_1, box_2) > 0:
-    return 0
+    return -1
 
   left = min(box_1[0] + box_1[2], box_2[0] + box_2[2])
   right = max(box_1[0], box_2[0])
@@ -406,7 +405,7 @@ def get_classifier_score(features, classifier):
 
 def record_features(box_1, box_2, features, feature_file):
   with open(feature_file, 'a') as f:
-    f.write(','.join([str(x) for x in (box_1[0:4] + box_2[0:4])]))
+    f.write(','.join([str(x) for x in (box_1[:4] + box_2[:4])]))
 
     for x in sorted(features.keys()):
       f.write(',' + str(features[x]))
@@ -543,6 +542,7 @@ def merge_box_groups(group_1, group_2, threshold, bbox):
         # We may be able to make a correct assumption about
         # which is smallest, but we'll check for now
         selector = get_smallest
+#         selector = get_box1
         
       merged.append(selector(group_1[i], group_2[conns[0]]))
 
@@ -556,6 +556,7 @@ def merge_box_groups(group_1, group_2, threshold, bbox):
       # This is guaranteed to be a many-1, thus we
       # can simply take the smallest
       merged.append(get_smallest(group_2[i], group_1[conns[0]]))
+      # merged.append(group_1[conns[0]])
 
   return merged
 
@@ -585,6 +586,9 @@ def get_largest(box_1, box_2):
     return box_1
   
   return box_2
+
+def get_box1(box_1, box_2):
+  return box_1
 
 def get_smallest(box_1, box_2):
   area_1 = box_1[2] * box_1[3]

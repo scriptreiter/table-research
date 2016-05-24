@@ -89,13 +89,14 @@ def run_test(images, base_dir):
     # of legends, etc.
 
     root_boxes = hallucinator.get_root_contours(h_boxes, hierarchy)
-    best_root = hallucinator.get_most_nested(root_boxes, hierarchy, h_boxes)
-    if best_root is None:
-      best_rects = h_boxes
-      base_box = get_full_box(image, base_dir)
-    else:
-      best_rects = hallucinator.get_rects(best_root[1], h_boxes)
-      base_box = hallucinator.contour_to_box(best_root[0][1])
+#     import pdb;pdb.set_trace()
+#     best_root = hallucinator.get_most_nested(root_boxes, hierarchy, h_boxes)
+#     if best_root is None:
+    best_rects = h_boxes
+    base_box = get_full_box(image, base_dir)
+#     else:
+#       best_rects = hallucinator.get_rects(best_root[1], h_boxes)
+#       base_box = hallucinator.contour_to_box(best_root[0][1])
     child_boxes = hallucinator.contours_to_boxes(hallucinator.get_child_contours(best_rects, hierarchy))
 
     # gt_boxes = get_gt_boxes(image, img_pref)
@@ -119,6 +120,7 @@ def run_test(images, base_dir):
 
     # TODO: Ensure that this is sorted right
     # boxes = boxer.add_labels(merged_boxes, merged_labels, 0.9)
+    # boxes = cloud_api.add_labels(merged_boxes, base_dir + '/', image, img_pref + 'google_cache/', 1)
     boxes = cloud_api.add_labels(merged_boxes, base_dir + '/' + zoom_prefix, image, img_pref + 'google_cache/' + zoom_prefix, zoom_level)
 
     scores = liner.rate_lines(lines, boxes)

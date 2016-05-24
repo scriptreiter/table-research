@@ -25,10 +25,10 @@ def get_transform(base_path, img_name):
   return (dist_img, scale_output(dist_img.copy()))
 
 def scale_output(img):
-  max_val = img.max()
+  img_area = len(img) * len(img[0])
   for r in range(len(img)):
     for c in range(len(img[r])):
-      img[r][c] = int(img[r][c] * 255 / max_val)
+      img[r][c] = img[r][c] * 1.0 / img_area
 
   return img
 
